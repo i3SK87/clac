@@ -4,9 +4,12 @@
  * Ordenada por título lleva los rótulos de cada letra pegados arriba mientras
  * se baja, como la agenda del teléfono; por fecha o por uso, no, que ahí la
  * inicial no dice nada.
+ *
+ * Cada fila tiene clic derecho; el menú lo pone quien la usa, que es quien
+ * sabe qué se puede hacer en esa vista.
  */
-import { useEffect, useRef, type ReactNode } from 'react'
-import { ArrowUpDown, Star } from 'lucide-react'
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react'
+import { ArrowUpDown } from 'lucide-react'
 import { inicialDe } from '@shared/webs'
 import { haceCuanto } from '@shared/fechas'
 import type { ElementoLista, OrdenLista } from '@shared/tipos'
@@ -26,6 +29,8 @@ export function Lista({
   vacia,
   alSeleccionar,
   alOrdenar,
+  alMenu,
+  conMenu,
   papelera
 }: {
   elementos: ElementoLista[]
@@ -35,6 +40,10 @@ export function Lista({
   vacia: ReactNode
   alSeleccionar: (id: string) => void
   alOrdenar: (o: OrdenLista) => void
+  /** El clic derecho sobre una fila. */
+  alMenu?: (e: ElementoLista) => (evento: MouseEvent) => void
+  /** La fila sobre la que está abierto el menú, marcada mientras tanto. */
+  conMenu?: string | null
   papelera?: boolean
 }): ReactNode {
   const contenedor = useRef<HTMLDivElement>(null)
@@ -80,8 +89,9 @@ export function Lista({
                 role="option"
                 aria-selected={e.id === seleccion}
                 data-id={e.id}
-                className={`fila-elemento${e.id === seleccion ? ' elegida' : ''}`}
+                className={`fila-elemento${e.id === seleccion ? ' elegida' : ''}${e.id === conMenu ? ' marcada' : ''}`}
                 onClick={() => alSeleccionar(e.id)}
+                onContextMenu={alMenu?.(e)}
               >
                 <Avatar titulo={e.titulo} categoria={e.categoria} webs={e.webs} />
                 <span className="fila-textos">
@@ -90,7 +100,6 @@ export function Lista({
                     {papelera && e.eliminadoEn ? `Borrado ${haceCuanto(e.eliminadoEn)}` : e.subtitulo || ' '}
                   </span>
                 </span>
-                {e.favorito && <Star size={13} className="fila-estrella" fill="currentColor" aria-label="Favorito" />}
               </button>
             </div>
           )

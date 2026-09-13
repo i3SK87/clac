@@ -5,7 +5,7 @@
  * petición y las piezas que necesita, y devuelve la respuesta. Así se prueba en
  * Node con una caja fuerte de verdad.
  */
-import { buscar } from '@shared/buscar'
+import { buscar, sugerencias } from '@shared/buscar'
 import { contrasenaDe, seccionesDePlantilla, totpDe, usuarioDe } from '@shared/categorias'
 import { codigoTotp, leerTotp } from '@shared/totp'
 import { dominioBase, dominioDe } from '@shared/webs'
@@ -19,8 +19,13 @@ export interface Piezas {
   ajustes: () => Ajustes
   version: string
   desbloquear: (contrasena: string) => void
+  /** Si ahora se podría abrir con Windows Hello. */
+  helloListo: () => boolean
+  desbloquearHello: () => Promise<void>
   copiar: (texto: string) => Promise<unknown>
   abrirElemento: (id: string) => void
+  /** La caja ha cambiado por algo de la extensión: la ventana tiene que recargar la lista. */
+  alCambiar: () => void
 }
 
 /** Las categorías que tienen algo que rellenar en un formulario. */
@@ -33,12 +38,13 @@ export function elementosParaWeb(caja: CajaFuerte, url: string, consulta: string
   const lista = caja.listar().filter(rellenable)
   const coincide = (e: ElementoLista): boolean => base !== '' && e.webs.some((w) => dominioBase(w) === base)
 
+  // Sin escribir nada: lo de esta web arriba y, debajo, lo que más usas.
   const elegidos = consulta.trim()
     ? buscar(lista, consulta).slice(0, 40)
-    : lista
-        .filter((e) => coincide(e) || e.favorito)
-        .sort((a, b) => Number(coincide(b)) - Number(coincide(a)) || b.usos - a.usos || a.titulo.localeCompare(b.titulo, 'es'))
-        .slice(0, 40)
+    : [
+        ...lista.filter(coincide).sort((a, b) => b.usos - a.usos || a.titulo.localeCompare(b.titulo, 'es')),
+        ...sugerencias(lista.filter((e) => !coincide(e)), 8)
+      ].slice(0, 40)
 
   return elegidos.map((e) => {
     const detalle = caja.obtener(e.id)
@@ -127,10 +133,21 @@ export async function atender(p: Peticion, piezas: Piezas): Promise<Respuesta> {
 async function responder(p: Peticion, piezas: Piezas): Promise<unknown> {
   if (p.tipo === 'estado') {
     const a = piezas.ajustes()
-    return { sesion: piezas.estado(), tema: a.theme, paleta: a.palette, version: piezas.version } satisfies EstadoNavegador
+    const sesion = piezas.estado()
+    return {
+      sesion,
+      tema: a.theme,
+      paleta: a.palette,
+      version: piezas.version,
+      hello: sesion === 'bloqueada' && piezas.helloListo()
+    } satisfies EstadoNavegador
   }
   if (p.tipo === 'desbloquear') {
     piezas.desbloquear(p.contrasena)
+    return null
+  }
+  if (p.tipo === 'desbloquearHello') {
+    await piezas.desbloquearHello()
     return null
   }
   if (p.tipo === 'abrirApp') return null
@@ -150,8 +167,13 @@ async function responder(p: Peticion, piezas: Piezas): Promise<unknown> {
       if (!texto) throw new Error('Ese elemento no lo tiene.')
       return piezas.copiar(texto)
     }
-    case 'guardar':
-      return guardarDesdeWeb(caja, p.url, p.titulo, p.usuario, p.contrasena)
+    case 'guardar': {
+      // Sin este aviso, lo guardado desde la web no salía en la ventana hasta
+      // reiniciar CLAC: la caja lo tenía, pero la lista de la ventana era la de antes.
+      const r = guardarDesdeWeb(caja, p.url, p.titulo, p.usuario, p.contrasena)
+      piezas.alCambiar()
+      return r
+    }
     case 'abrirElemento':
       piezas.abrirElemento(p.elementoId)
       return null

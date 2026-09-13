@@ -107,6 +107,10 @@
 
 .fila-elemento:hover { background: var(--bg-sunken); }
 
+/* La fila del clic derecho, marcada mientras su menú está abierto: que se vea
+   sobre cuál se ha pulsado aunque no sea la elegida. */
+.fila-elemento.marcada:not(.elegida) { background: var(--bg-sunken); box-shadow: inset 0 0 0 1px var(--border); }
+
 .fila-elemento.elegida {
   background: var(--accent-soft);
 }
@@ -129,11 +133,6 @@
 .fila-sub {
   font-size: 12.5px;
   color: var(--fg-muted);
-}
-
-.fila-estrella {
-  color: var(--warning);
-  flex: none;
 }
 
 /* El avatar de un elemento: la inicial de la web, o el icono de su categoría. */
@@ -201,8 +200,6 @@
   gap: 6px;
   align-self: flex-start;
 }
-
-.btn.favorito { color: var(--warning); }
 
 .detalle-cuerpo {
   display: flex;
@@ -277,7 +274,11 @@
   transition: opacity 0.12s ease;
 }
 
+/* Con el menú del clic derecho abierto, el campo se queda marcado y con sus botones. */
+.campo-lectura.marcada .boton-valor { background: var(--bg-sunken); }
+
 .campo-lectura:hover .campo-acciones,
+.campo-lectura.marcada .campo-acciones,
 .campo-acciones:focus-within,
 .campo-acciones.visibles {
   opacity: 1;
@@ -733,7 +734,14 @@
   width: 100%;
 }
 
-/* El lápiz de cada caja fuerte sale al pasar por encima, sobre el número. */
+/*
+ * El lápiz de cada caja fuerte sale al pasar por encima, en el sitio del número.
+ *
+ * Iba encima del número con el fondo de la barra, y el número asomaba por el
+ * lado izquierdo del lápiz (el recuadro del número es más ancho que el lápiz),
+ * además de verse el cuadrado del fondo sobre la fila iluminada. Ahora el número
+ * se aparta mientras el lápiz está a la vista, y el lápiz no lleva fondo.
+ */
 .nav-editar {
   position: absolute;
   right: 6px;
@@ -745,7 +753,7 @@
   height: 24px;
   border: none;
   border-radius: 6px;
-  background: var(--sidebar-bg);
+  background: transparent;
   color: var(--sidebar-fg);
   opacity: 0;
   cursor: pointer;
@@ -754,6 +762,8 @@
 
 .nav-fila:hover .nav-editar,
 .nav-editar:focus-visible { opacity: 1; }
+.nav-fila:hover:has(.nav-editar) .count,
+.nav-fila:has(.nav-editar:focus-visible) .count { visibility: hidden; }
 .nav-editar:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
 
 .sidebar-section.con-boton {
@@ -990,6 +1000,17 @@
   font-size: 14px;
 }
 
+/* Windows Hello, justo debajo de desbloquear: son dos maneras de lo mismo. */
+.puerta-hello { margin-top: -6px; }
+
+.puerta-nota {
+  color: var(--fg-subtle);
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+  margin-top: -4px;
+}
+
 .puerta .link,
 .puerta-olvido {
   align-self: center;
@@ -1217,7 +1238,6 @@
 
 .ajuste-select { width: auto; min-width: 170px; }
 
-.ajustes-pie { text-align: center; margin-top: 4px; }
 
 .aviso-fuerte {
   display: flex;

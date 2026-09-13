@@ -6,6 +6,8 @@
  * opción de verla en grande. Todo lo que se copia pasa por el proceso
  * principal, que descifra, copia sin dejar rastro en el historial de Windows y
  * vacía el portapapeles al rato.
+ *
+ * Cada campo tiene también clic derecho, con lo mismo que sus botones.
  */
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import {
@@ -25,10 +27,10 @@ import {
   Paperclip,
   Pencil,
   RotateCcw,
-  Star,
   Trash2
 } from 'lucide-react'
 import { Confirm, Modal, useAvisos } from 'casa/ui'
+import { MenuContextual, type OpcionMenu } from 'casa/menu'
 import { categoria } from '@shared/categorias'
 import { dominioDe, normalizarWeb } from '@shared/webs'
 import { fortaleza } from '@shared/fortaleza'
@@ -63,6 +65,7 @@ function CampoLectura({
 }): ReactNode {
   const [revelado, setRevelado] = useState(false)
   const [grande, setGrande] = useState(false)
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const oculto = campo.tipo === 'oculto' || campo.tipo === 'ocultoMultilinea'
   const visible = !oculto || revelado || revelarTodo
   const esContrasena = campo.clave === 'contrasena' || campo.tipo === 'oculto'
@@ -86,8 +89,22 @@ function CampoLectura({
     valor = campo.valor
   }
 
+  const web = campo.tipo === 'url' && normalizarWeb(campo.valor)
+  const opciones: OpcionMenu[] = [
+    { etiqueta: campo.tipo === 'totp' ? 'Copiar el código' : 'Copiar', icono: Copy, onElegir: () => alCopiar(campo) },
+    ...(oculto ? [{ etiqueta: visible ? 'Ocultar' : 'Mostrar', icono: visible ? EyeOff : Eye, onElegir: () => setRevelado(!visible) }] : []),
+    ...(campo.tipo === 'oculto' ? [{ etiqueta: 'Ver en grande', icono: Maximize2, onElegir: () => setGrande(true) }] : []),
+    ...(web ? [{ etiqueta: 'Abrir en el navegador', icono: ExternalLink, onElegir: () => void api.web.abrir(campo.valor) }] : [])
+  ]
+
   return (
-    <div className="campo-lectura">
+    <div
+      className={`campo-lectura${menu ? ' marcada' : ''}`}
+      onContextMenu={(ev) => {
+        ev.preventDefault()
+        setMenu({ x: ev.clientX, y: ev.clientY })
+      }}
+    >
       <div className="rotulo">{campo.etiqueta}</div>
       <div className="campo-fila">
         {campo.tipo === 'totp' ? (
@@ -126,6 +143,7 @@ function CampoLectura({
       </div>
       {esContrasena && campo.clave === 'contrasena' && campo.valor && <Medidor fortaleza={fortaleza(campo.valor)} />}
       {grande && <EnGrande valor={campo.valor} alCerrar={() => setGrande(false)} />}
+      {menu && <MenuContextual x={menu.x} y={menu.y} opciones={opciones} onCerrar={() => setMenu(null)} />}
     </div>
   )
 }
@@ -221,17 +239,6 @@ export function Detalle({ id, alEditar }: { id: string; alEditar: () => void }):
           </div>
         </div>
         <div className="detalle-botones">
-          {!enPapelera && (
-            <button
-              className={`btn ghost icon${e.favorito ? ' favorito' : ''}`}
-              onClick={() => void run(() => api.elementos.favorito(e.id))}
-              title={e.favorito ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-              aria-label={e.favorito ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-              aria-pressed={e.favorito}
-            >
-              <Star size={17} fill={e.favorito ? 'currentColor' : 'none'} />
-            </button>
-          )}
           {!enPapelera && (
             <button className="btn" onClick={alEditar} title="Editar (Ctrl+E)">
               <Pencil size={15} /> Editar
@@ -402,7 +409,7 @@ export function Detalle({ id, alEditar }: { id: string; alEditar: () => void }):
 
 /* ---------- Mover ---------- */
 
-function MoverA({ elemento, alCerrar }: { elemento: Elemento; alCerrar: () => void }): ReactNode {
+export function MoverA({ elemento, alCerrar }: { elemento: Elemento; alCerrar: () => void }): ReactNode {
   const { bovedas, run } = useStore()
   const { toast } = useAvisos()
   return (

@@ -48,13 +48,16 @@ export function buscar<T extends ElementoLista>(lista: T[], consulta: string): T
   return puntuados.sort((a, b) => b.puntos - a.puntos).map((x) => x.e)
 }
 
-/** Lo que propone el acceso rápido antes de escribir nada: favoritos y lo más usado. */
+/**
+ * Lo que proponen el acceso rápido y la extensión antes de escribir nada: lo más
+ * usado, y a igualdad lo último que se usó. Hubo favoritos que iban delante, y
+ * se quitaron: lo que de verdad se usa ya sube solo.
+ */
 export function sugerencias<T extends ElementoLista>(lista: T[], cuantos = 8): T[] {
   return [...lista]
     .filter((e) => e.estado === 'activo')
     .sort(
       (a, b) =>
-        Number(b.favorito) - Number(a.favorito) ||
         b.usos - a.usos ||
         (b.usado ?? '').localeCompare(a.usado ?? '') ||
         a.titulo.localeCompare(b.titulo, 'es')

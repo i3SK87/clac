@@ -1,7 +1,9 @@
 /**
  * ¿Ha salido esta contraseña en alguna filtración?
  *
- * Es la única vez que CLAC sale a internet, y solo cuando se pulsa el botón.
+ * Es la única vez que CLAC pregunta algo sobre tus contraseñas, y solo cuando se
+ * pulsa el botón. La otra salida a internet, mirar si hay versión nueva, no
+ * lleva nada de la caja (ver actualizaciones.ts).
  * Pregunta a Have I Been Pwned, que guarda los hash de cientos de millones de
  * contraseñas filtradas, por **anonimato-k**: de cada contraseña se calcula su
  * SHA-1 y se mandan los cinco primeros caracteres. El servicio devuelve los

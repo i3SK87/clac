@@ -3,9 +3,12 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   ajustes,
+  avisar,
   bloquear,
   cerrarServicio,
   desbloquear,
+  desbloquearConHello,
+  estadoHelloSesion,
   estadoSesion,
   iniciarServicio,
   laCaja
@@ -19,6 +22,7 @@ import { copiar, vaciarSiEsNuestro } from './portapapeles'
 import { aplicarNavegador, pararNavegador } from './navegador/conexion'
 import type { Piezas } from './navegador/protocolo'
 import { registrar, registrarFallo } from './registro'
+import { iniciarActualizaciones } from './actualizaciones'
 import type { Ajustes } from '@shared/tipos'
 
 let ventana: BrowserWindow | null = null
@@ -187,11 +191,15 @@ const piezasNavegador: Piezas = {
   ajustes,
   version: app.getVersion(),
   desbloquear: (contrasena) => desbloquear(contrasena),
+  helloListo: () => estadoHelloSesion().listo,
+  // Sin ventana propia: el diálogo sale sobre la que esté delante, el navegador.
+  desbloquearHello: () => desbloquearConHello(0n),
   copiar: (texto) => copiar(texto, ajustes().portapapelesSegundos),
   abrirElemento: (id) => {
     mostrarVentana()
     ventana?.webContents.send('abrir:elemento', id)
-  }
+  },
+  alCambiar: () => avisar('datos:cambio')
 }
 
 /** Lo último que se aplicó del navegador: no se reescribe el registro en cada ajuste. */
@@ -238,6 +246,7 @@ if (!app.requestSingleInstanceLock()) {
     vigilarBloqueo(ajustes, () => laCaja().abierta(), bloquear)
     // PowerShell tarda en arrancar en frío: se deja listo antes de la primera copia.
     setTimeout(precalentar, 3000)
+    iniciarActualizaciones((estado) => avisar('actualizacion:cambio', estado), () => ajustes().buscarVersiones)
     registrar('arranque', `CLAC ${app.getVersion()}`)
   })
 

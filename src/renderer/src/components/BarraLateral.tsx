@@ -1,14 +1,19 @@
 /**
- * La barra lateral de la casa, con lo de una caja fuerte: todo, favoritos,
- * Watchtower y el generador arriba; las categorías, cajas fuertes y etiquetas
- * que de verdad tienen algo, en medio; el archivo y la papelera, abajo.
+ * La barra lateral de la casa, con lo de una caja fuerte: todo, Watchtower y
+ * el generador arriba; las categorías, cajas fuertes y etiquetas que de verdad
+ * tienen algo, en medio; el archivo y la papelera, abajo.
+ *
+ * Las cajas fuertes tienen clic derecho: editarla o eliminarla.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Archive, Layers, Lock, Pencil, Plus, Settings, ShieldAlert, Star, Tag, Trash2, WandSparkles } from 'lucide-react'
+import { Archive, Layers, Lock, Pencil, Plus, Settings, ShieldAlert, Tag, Trash2, WandSparkles } from 'lucide-react'
+import { Confirm, useAvisos } from 'casa/ui'
+import { MenuContextual, useMenu } from 'casa/menu'
 import { CATEGORIAS } from '@shared/categorias'
 import { Icono } from '../lib/iconos'
 import { api, useStore, type Vista } from '../lib/store'
 import { FormularioBoveda } from './FormularioBoveda'
+import { AvisoVersion } from './Actualizacion'
 import type { Boveda } from '@shared/tipos'
 import marca from '../../../../resources/icon.png'
 
@@ -23,12 +28,17 @@ interface PropsItem {
   numero?: number
   aviso?: boolean
   extra?: ReactNode
+  alMenu?: (evento: React.MouseEvent) => void
+  marcada?: boolean
 }
 
 export function BarraLateral(): ReactNode {
   const { elementos, bovedas, vista, irA, revision, run } = useStore()
   const [problemas, setProblemas] = useState(0)
   const [editandoBoveda, setEditandoBoveda] = useState<Boveda | 'nueva' | null>(null)
+  const [borrandoBoveda, setBorrandoBoveda] = useState<Boveda | null>(null)
+  const { menu, abrir: abrirMenu, cerrar: cerrarMenu } = useMenu<Boveda>()
+  const { toast } = useAvisos()
 
   // El número de Watchtower se recalcula con cada cambio: es barato y es lo que
   // hace que el aviso no se quede puesto después de cambiar la contraseña.
@@ -58,14 +68,18 @@ export function BarraLateral(): ReactNode {
 
   const archivados = elementos.filter((e) => e.estado === 'archivado').length
   const eliminados = elementos.filter((e) => e.estado === 'eliminado').length
-  const favoritos = activos.filter((e) => e.favorito).length
   const etiquetas = [...cuenta.porEtiqueta.keys()].sort((a, b) => a.localeCompare(b, 'es'))
 
   // Una función y no un componente: definido aquí dentro, React lo tomaría por
   // uno nuevo en cada pintada y desmontaría los botones, foco incluido.
-  const item = (clave: string, { destino, icono, etiqueta, numero, aviso, extra }: PropsItem): ReactNode => (
+  const item = (clave: string, { destino, icono, etiqueta, numero, aviso, extra, alMenu, marcada }: PropsItem): ReactNode => (
     <div className="nav-fila" key={clave}>
-      <button className={`nav-item${mismaVista(vista, destino) ? ' active' : ''}`} onClick={() => irA(destino)} title={etiqueta}>
+      <button
+        className={`nav-item${mismaVista(vista, destino) ? ' active' : ''}${marcada ? ' marcada' : ''}`}
+        onClick={() => irA(destino)}
+        onContextMenu={alMenu}
+        title={etiqueta}
+      >
         {icono}
         <span className="nav-label">{etiqueta}</span>
         {numero != null && numero > 0 && <span className={`count${aviso ? ' aviso' : ''}`}>{numero}</span>}
@@ -83,7 +97,6 @@ export function BarraLateral(): ReactNode {
 
       {/* «Todo» y no «Todos los elementos»: con el número al lado no cabía entero. */}
       {item('todos', { destino: { tipo: 'todos' }, icono: <Layers size={17} />, etiqueta: 'Todo', numero: activos.length })}
-      {item('favoritos', { destino: { tipo: 'favoritos' }, icono: <Star size={17} />, etiqueta: 'Favoritos', numero: favoritos })}
       {item('watchtower', {
         destino: { tipo: 'watchtower' },
         icono: <ShieldAlert size={17} />,
@@ -115,6 +128,8 @@ export function BarraLateral(): ReactNode {
           icono: <Icono nombre={b.icono} size={17} color={b.color} />,
           etiqueta: b.nombre,
           numero: cuenta.porBoveda.get(b.id),
+          alMenu: abrirMenu(b),
+          marcada: menu?.de.id === b.id,
           extra: (
             <button
               className="nav-editar solo-ancha"
@@ -144,6 +159,8 @@ export function BarraLateral(): ReactNode {
 
       <div className="sidebar-footer">
         {item('ajustes', { destino: { tipo: 'ajustes' }, icono: <Settings size={17} />, etiqueta: 'Ajustes' })}
+        {/* Bajo Ajustes, como en BONK: a la vista, sin tapar nada ni ser urgente. */}
+        <AvisoVersion />
         <button className="nav-item" onClick={() => void run(() => api.sesion.bloquear())} title="Bloquear (Ctrl+Mayús+L)">
           <Lock size={17} />
           <span className="nav-label">Bloquear</span>
@@ -151,6 +168,47 @@ export function BarraLateral(): ReactNode {
         </button>
       </div>
 
+      {menu && (
+        <MenuContextual
+          x={menu.x}
+          y={menu.y}
+          onCerrar={cerrarMenu}
+          opciones={[
+            { etiqueta: 'Editar…', icono: Pencil, onElegir: () => setEditandoBoveda(menu.de) },
+            { etiqueta: 'Nueva caja fuerte…', icono: Plus, onElegir: () => setEditandoBoveda('nueva') },
+            ...(bovedas.length > 1
+              ? [{ etiqueta: 'Eliminar…', icono: Trash2, peligrosa: true, onElegir: () => setBorrandoBoveda(menu.de) }]
+              : [])
+          ]}
+        />
+      )}
+      {borrandoBoveda && (() => {
+        // Cuenta todo, también lo archivado y la papelera: eso tampoco deja borrarla.
+        const contiene = elementos.filter((e) => e.bovedaId === borrandoBoveda.id).length
+        return (
+          <Confirm
+            title={`Eliminar «${borrandoBoveda.nombre}»`}
+            message={
+              contiene
+                ? `Tiene ${contiene} ${contiene === 1 ? 'elemento' : 'elementos'}, contando el archivo y la papelera. Muévelos a otra caja fuerte antes de eliminarla.`
+                : 'La caja fuerte está vacía y se eliminará.'
+            }
+            confirmLabel={contiene ? 'Entendido' : 'Eliminar'}
+            destructive={!contiene}
+            onCancel={() => setBorrandoBoveda(null)}
+            onConfirm={() => {
+              const b = borrandoBoveda
+              setBorrandoBoveda(null)
+              if (contiene) return
+              void run(() => api.bovedas.eliminar(b.id).then(() => true)).then((ok) => {
+                if (!ok) return
+                toast('Caja fuerte eliminada')
+                if (vista.tipo === 'boveda' && vista.id === b.id) irA({ tipo: 'todos' })
+              })
+            }}
+          />
+        )
+      })()}
       {editandoBoveda && (
         <FormularioBoveda
           boveda={editandoBoveda === 'nueva' ? null : editandoBoveda}

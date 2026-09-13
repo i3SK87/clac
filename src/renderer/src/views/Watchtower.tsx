@@ -136,7 +136,7 @@ export function VistaWatchtower(): ReactNode {
         <div className="col" style={{ gap: 4, flex: 1 }}>
           <h3>¿Han salido tus contraseñas en alguna filtración?</h3>
           <p className="small muted">
-            Es lo único que CLAC consulta en internet, y solo si lo pides. Se pregunta a Have I Been Pwned sin mandar ninguna contraseña: de cada una
+            Es lo único que CLAC consulta sobre tus contraseñas, y solo si lo pides. Se pregunta a Have I Been Pwned sin mandar ninguna contraseña: de cada una
             viajan solo los cinco primeros caracteres de su huella SHA-1, y la comparación se hace aquí.
           </p>
           <p className="small subtle">

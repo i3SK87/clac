@@ -199,8 +199,36 @@ export class CajaFuerte {
 
   /** Abre la caja. Lanza `ErrorContrasena` si la contraseña o la clave secreta no casan. */
   desbloquear(contrasena: string, secreto: string): void {
-    const mk = this.abrirClaveCuenta(contrasena, secreto)
+    this.abrirCon(this.abrirClaveCuenta(contrasena, secreto))
+  }
+
+  /**
+   * Abre con la clave de la cuenta ya en la mano, sin contraseña: es lo que
+   * hace Windows Hello con la que guardó al bloquearse. Si no es la de esta
+   * caja, no abre ninguna caja fuerte y lanza `ErrorContrasena`. Se queda con
+   * una copia: la que recibe la puede borrar quien la ha dado.
+   */
+  desbloquearConClaveCuenta(clave: Buffer): void {
+    const mk = Buffer.from(clave)
+    try {
+      this.abrirCon(mk)
+    } catch (error) {
+      mk.fill(0)
+      if (error instanceof ErrorDescifrado) throw new ErrorContrasena()
+      throw error
+    }
+  }
+
+  /** Una copia de la clave de la cuenta, para guardarla mientras la caja está bloqueada. */
+  copiaClaveCuenta(): Buffer {
+    return Buffer.from(this.s().mk)
+  }
+
+  private abrirCon(mk: Buffer): void {
     const sesion: Sesion = { mk, claves: new Map(), bovedas: new Map(), lista: new Map(), danados: [] }
+    // Con la clave equivocada, lo primero que falla es el sobre de los datos de la cuenta.
+    const sobre = this.meta<string>('datosCuenta')
+    if (sobre) abrir(mk, Buffer.from(sobre, 'base64'), 'cuenta:datos').fill(0)
 
     const filas = this.db.prepare('SELECT id, clave, datos, orden, creada FROM bovedas ORDER BY orden, creada').all() as unknown as Array<{
       id: string
@@ -209,11 +237,16 @@ export class CajaFuerte {
       orden: number
       creada: string
     }>
-    for (const f of filas) {
-      const vk = abrir(mk, f.clave, `boveda:${f.id}:clave`)
-      const datos = abrirJson<Omit<Boveda, 'id' | 'orden' | 'creada'>>(vk, f.datos, `boveda:${f.id}:datos`)
-      sesion.claves.set(f.id, vk)
-      sesion.bovedas.set(f.id, { ...datos, id: f.id, orden: f.orden, creada: f.creada })
+    try {
+      for (const f of filas) {
+        const vk = abrir(mk, f.clave, `boveda:${f.id}:clave`)
+        sesion.claves.set(f.id, vk)
+        const datos = abrirJson<Omit<Boveda, 'id' | 'orden' | 'creada'>>(vk, f.datos, `boveda:${f.id}:datos`)
+        sesion.bovedas.set(f.id, { ...datos, id: f.id, orden: f.orden, creada: f.creada })
+      }
+    } catch (error) {
+      for (const k of sesion.claves.values()) k.fill(0)
+      throw error
     }
 
     this.sesion = sesion
@@ -473,7 +506,9 @@ export class CajaFuerte {
       const cambiaContenido =
         JSON.stringify(anteriorDetalle) !== JSON.stringify(detalle) ||
         JSON.stringify({ ...anteriorResumen, favorito: false }) !== JSON.stringify({ ...resumen, favorito: false })
-      // Marcar como favorito no es editar: no deja versión ni cambia la fecha.
+      // El favorito no cuenta como editar. Ya no se marca en CLAC, pero llega de
+      // lo importado y viaja al exportar: se conserva sin dejar versión.
+      // Guardar sin cambiar nada tampoco deja versión ni cambia la fecha.
       if (cambiaContenido) this.guardarVersion(id, entrada.bovedaId, anteriorResumen, anteriorDetalle)
       this.db
         .prepare('UPDATE elementos SET resumen = ?, detalle = ?, modificado = ? WHERE id = ?')
@@ -530,12 +565,6 @@ export class CajaFuerte {
       secciones: version.detalle.secciones,
       notas: version.detalle.notas
     })
-  }
-
-  alternarFavorito(id: string): ElementoLista {
-    const e = this.obtener(id)
-    this.guardar({ ...e, favorito: !e.favorito })
-    return this.s().lista.get(id)!
   }
 
   cambiarEstado(ids: string[], estado: EstadoElemento): void {

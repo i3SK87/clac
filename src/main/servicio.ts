@@ -14,6 +14,8 @@ import { guardarAjustes, leerAjustes } from './boveda/ajustes'
 import { guardarClaveLocal, leerClaveLocal } from './claveLocal'
 import { vaciarSiEsNuestro } from './portapapeles'
 import { registrar } from './registro'
+import { pedirHello } from './ayudante'
+import { anotarMaestra, guardarClave, hayClave, marcarEsperando, motivoHello, olvidarClave, sacarClave } from './hello'
 import { leerClave, nuevaClaveSecreta, nuevoIdCuenta, formatearClave, type ClaveSecreta } from '@shared/claveSecreta'
 import type { Ajustes, EstadoSesion } from '@shared/tipos'
 
@@ -59,6 +61,7 @@ export function ajustes(): Ajustes {
 
 export function cambiarAjustes(cambios: Partial<Ajustes>): Ajustes {
   const nuevos = guardarAjustes(laCaja().db, cambios)
+  if (!nuevos.windowsHello) olvidarClave()
   avisar('ajustes:cambio', nuevos)
   return nuevos
 }
@@ -68,6 +71,7 @@ export function crearCaja(contrasena: string): string {
   const clave = nuevaClaveSecreta(nuevoIdCuenta())
   laCaja().crear(contrasena, clave)
   guardarClaveLocal(clave)
+  anotarMaestra()
   registrar('sesión', 'caja fuerte creada')
   cambio()
   return formatearClave(clave)
@@ -96,13 +100,55 @@ export function desbloquear(contrasena: string, claveEscrita?: string): void {
   }
   c.desbloquear(contrasena, clave.secreto)
   if (escrita) guardarClaveLocal(clave)
+  anotarMaestra()
+  olvidarClave()
   registrar('sesión', 'desbloqueada')
+  cambio()
+}
+
+/** Si la próxima vez se podrá entrar con Windows Hello, para enseñar el botón. */
+export function estadoHelloSesion(): { activo: boolean; listo: boolean } {
+  const activo = ajustes().windowsHello
+  return { activo, listo: activo && hayClave() }
+}
+
+/**
+ * Desbloquea con Windows Hello. `ventana` es sobre qué ventana sale el
+ * diálogo; 0, la que esté delante (lo pide la extensión, y delante está el
+ * navegador).
+ */
+export async function desbloquearConHello(ventana: bigint): Promise<void> {
+  const c = laCaja()
+  if (c.abierta()) return
+  if (!estadoHelloSesion().listo) throw new Error('Esta vez hace falta la contraseña maestra.')
+  marcarEsperando(true)
+  let resultado: string | null
+  try {
+    resultado = await pedirHello('Desbloquear CLAC', ventana)
+  } finally {
+    marcarEsperando(false)
+  }
+  if (resultado === 'RetriesExhausted') olvidarClave()
+  if (resultado !== 'Verified') throw new Error(motivoHello(resultado))
+  // Mientras Windows preguntaba, se ha podido abrir con la contraseña.
+  if (c.abierta()) return
+  const clave = sacarClave()
+  if (!clave) throw new Error('Esta vez hace falta la contraseña maestra.')
+  try {
+    c.desbloquearConClaveCuenta(clave)
+  } finally {
+    clave.fill(0)
+  }
+  olvidarClave()
+  registrar('sesión', 'desbloqueada con Windows Hello')
   cambio()
 }
 
 export function bloquear(motivo: string): void {
   const c = laCaja()
   if (!c.abierta()) return
+  // Para Windows Hello, la clave de la cuenta se queda en memoria y cifrada.
+  if (ajustes().windowsHello) guardarClave(c.copiaClaveCuenta())
   c.bloquear()
   // Lo copiado de la caja no se queda en el portapapeles con la caja cerrada.
   vaciarSiEsNuestro()
@@ -147,6 +193,7 @@ export function restaurarCopia(ruta: string, contrasena: string, claveEscrita: s
 
   const actual = join(carpeta, NOMBRE_ARCHIVO)
   const tenia = laCaja().existe()
+  olvidarClave()
   laCaja().cerrar()
   if (tenia && existsSync(actual)) {
     const dir = join(carpeta, 'copias')
@@ -159,6 +206,7 @@ export function restaurarCopia(ruta: string, contrasena: string, claveEscrita: s
   caja = new CajaFuerte(carpeta)
   guardarClaveLocal(leida.clave)
   caja.desbloquear(contrasena, leida.clave.secreto)
+  anotarMaestra()
   registrar('sesión', 'copia restaurada')
   cambio()
 }
@@ -177,6 +225,7 @@ export function cerrarServicio(): void {
   } catch {
     // Si la copia falla, no se impide salir.
   }
+  olvidarClave()
   caja?.cerrar()
   caja = null
 }

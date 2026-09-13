@@ -21,7 +21,9 @@ export const AJUSTES_DE_FABRICA: Ajustes = {
   cerrarABandeja: true,
   ordenLista: 'titulo',
   ultimaCopia: null,
-  navegador: false
+  navegador: false,
+  windowsHello: false,
+  buscarVersiones: true
 }
 
 export function leerAjustes(db: DatabaseSync): Ajustes {
@@ -67,6 +69,8 @@ function sanear(a: Ajustes): Ajustes {
     cerrarABandeja: a.cerrarABandeja !== false,
     ordenLista: a.ordenLista === 'modificado' || a.ordenLista === 'usado' ? a.ordenLista : 'titulo',
     ultimaCopia: typeof a.ultimaCopia === 'string' ? a.ultimaCopia : null,
-    navegador: a.navegador === true
+    navegador: a.navegador === true,
+    windowsHello: a.windowsHello === true,
+    buscarVersiones: a.buscarVersiones !== false
   }
 }

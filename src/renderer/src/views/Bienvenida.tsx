@@ -65,8 +65,8 @@ function Inicio({ alCrear, alRestaurar }: { alCrear: () => void; alRestaurar: ()
           queda en este equipo.
         </li>
         <li>
-          <ShieldCheck size={16} /> Sin cuenta, sin nube y sin conectarse a internet, salvo si pides comprobar
-          filtraciones.
+          <ShieldCheck size={16} /> Sin cuenta y sin nube. A internet sale solo para mirar si hay versión nueva y,
+          si lo pides, comprobar filtraciones.
         </li>
       </ul>
       <button className="btn primary puerta-boton" onClick={alCrear}>

@@ -5,8 +5,6 @@ import type { Vista } from './store'
 
 export function deLaVista(elementos: ElementoLista[], vista: Vista): ElementoLista[] {
   switch (vista.tipo) {
-    case 'favoritos':
-      return elementos.filter((e) => e.estado === 'activo' && e.favorito)
     case 'categoria':
       return elementos.filter((e) => e.estado === 'activo' && e.categoria === vista.id)
     case 'boveda':
@@ -42,8 +40,6 @@ export function tituloDeVista(vista: Vista, bovedas: Boveda[]): string {
   switch (vista.tipo) {
     case 'todos':
       return 'Todos los elementos'
-    case 'favoritos':
-      return 'Favoritos'
     case 'categoria':
       return categoria(vista.id).plural
     case 'boveda':

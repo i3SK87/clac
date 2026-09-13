@@ -15,7 +15,7 @@ const elementos = [
 function responder(p) {
   if (ESTADO === 'cerrada') return { id: p.id, ok: false, cerrada: true, error: 'CLAC no está abierta.' }
   switch (p.tipo) {
-    case 'estado': return { id: p.id, ok: true, datos: { sesion: ESTADO, tema: TEMA, paleta: 'grafito', version: '1.1.0' } }
+    case 'estado': return { id: p.id, ok: true, datos: { sesion: ESTADO, tema: TEMA, paleta: 'grafito', version: '1.2.0', hello: true } }
     case 'buscar': return { id: p.id, ok: true, datos: p.consulta ? elementos.filter((e) => e.titulo.toLowerCase().includes(p.consulta.toLowerCase())) : elementos }
     default: return { id: p.id, ok: true, datos: null }
   }

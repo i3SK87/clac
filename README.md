@@ -38,8 +38,11 @@ te la robara.
   identidades, DNI/NIE, pasaportes, carnés, cuentas bancarias (con IBAN), redes
   wifi, claves SSH, licencias, servidores… Cada uno con sus campos, y se pueden
   añadir más y abrir secciones propias.
-- **Varias cajas fuertes** (Personal, Trabajo…), **favoritos**, **etiquetas**,
-  **archivo** y **papelera** (lo borrado se va solo a los 30 días).
+- **Varias cajas fuertes** (Personal, Trabajo…), **etiquetas**, **archivo** y
+  **papelera** (lo borrado se va solo a los 30 días).
+- **Clic derecho**, como en BONK, en la lista, en cada campo y en las cajas fuertes.
+- **Windows Hello**: tras bloquearse, se vuelve a entrar con el PIN de Windows, la
+  huella o la cara. La contraseña maestra, al abrir CLAC y cada catorce días.
 - **Historial**: las 20 últimas versiones de cada elemento, para volver atrás.
 - **Códigos de un solo uso** (los de Google Authenticator), con su cuenta atrás.
 - **Archivos adjuntos** cifrados, de hasta 50 MB cada uno.
@@ -85,9 +88,14 @@ cuando la pulsas, y nunca envía el formulario por ti.
 
 ## Internet
 
-CLAC no se conecta a nada, salvo una cosa y solo cuando pulsas el botón:
-**Watchtower ▸ Comprobar ahora** pregunta a Have I Been Pwned si tus contraseñas
-han salido en alguna filtración. No viaja ninguna contraseña: de cada una se
+CLAC sale a internet para dos cosas:
+
+- **Versiones nuevas**: al abrir, mira en las releases de este repositorio si hay
+  una más nueva, como BONK. Si la hay, avisa bajo Ajustes y se descarga cuando
+  pulsas el aviso. No viaja nada de tu caja fuerte. Se apaga en
+  **Ajustes ▸ Acerca de ▸ Buscar versiones nuevas**.
+- **Watchtower ▸ Comprobar ahora**, solo cuando pulsas el botón, pregunta a Have
+  I Been Pwned si tus contraseñas han salido en alguna filtración. No viaja ninguna contraseña: de cada una se
 mandan los cinco primeros caracteres de su huella SHA-1 y la comparación se hace
 en tu equipo. Los iconos de las webs tampoco se descargan: el avatar es la
 inicial sobre un color que sale del propio dominio.

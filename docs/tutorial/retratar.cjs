@@ -37,9 +37,12 @@ const ESCENAS = [
     nombre: 't12-importar', html: 'index.html', w: 1180, h: 760,
     pasos: [['pulsar', '.nav-item', 'Ajustes'], ['pulsar', '.btn', 'Importar contraseñas'], ['pulsar', '.modal .btn.primary', 'Elegir el archivo']]
   },
+  { nombre: 't13-menu', html: 'index.html', w: 1180, h: 740, pasos: [['pulsar', '.fila-elemento', 'Banco Ejemplo'], ['contextual', '.fila-elemento', 'Google']] },
+  { nombre: 't14-menu-campo', html: 'index.html', w: 1180, h: 740, pasos: [['pulsar', '.fila-elemento', 'Google'], ['contextual', '.campo-lectura', 'Contraseña']] },
   { nombre: 'p01-extension', popup: true, estado: 'abierta', w: 370, h: 420, pasos: [] },
   { nombre: 'p02-extension-aviso', popup: true, estado: 'abierta', w: 370, h: 470, pasos: [['pulsar', '.ext-fila', 'Banco Ejemplo']] },
-  { nombre: 'p03-extension-generar', popup: true, estado: 'abierta', w: 370, h: 300, pasos: [['pulsar', '.ext-pie .btn', 'Generar']] }
+  { nombre: 'p03-extension-generar', popup: true, estado: 'abierta', w: 370, h: 300, pasos: [['pulsar', '.ext-pie .btn', 'Generar']] },
+  { nombre: 'p04-extension-bloqueada', popup: true, estado: 'bloqueada', w: 370, h: 360, pasos: [] }
 ]
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms))

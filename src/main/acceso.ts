@@ -8,6 +8,7 @@
  */
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
+import { helloEsperando } from './hello'
 
 let ventana: BrowserWindow | null = null
 
@@ -38,9 +39,10 @@ function crear(isDev: boolean, icono: string | undefined, fondo: string): Browse
     }
   })
   w.setAlwaysOnTop(true, 'pop-up-menu')
-  // Al perder el foco se va: es un buscador de paso, no una ventana más.
+  // Al perder el foco se va: es un buscador de paso, no una ventana más. Salvo
+  // si lo que se lo ha llevado es el diálogo de Windows Hello que ha pedido él.
   w.on('blur', () => {
-    if (!w.webContents.isDevToolsOpened()) w.hide()
+    if (!w.webContents.isDevToolsOpened() && !helloEsperando()) w.hide()
   })
   w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   w.webContents.on('will-navigate', (e) => e.preventDefault())

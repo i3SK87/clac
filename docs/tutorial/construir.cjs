@@ -5,7 +5,8 @@
 //
 // Las capturas salen de `capturas/`, que se rehacen con retratar.cjs.
 const { app, BrowserWindow } = require('electron')
-const { readFileSync, writeFileSync } = require('node:fs')
+const { readFileSync, writeFileSync, mkdtempSync, rmSync } = require('node:fs')
+const { tmpdir } = require('node:os')
 const { join } = require('node:path')
 
 const RAIZ = join(__dirname, '..', '..')
@@ -186,17 +187,17 @@ const html = `<!doctype html>
   <h1>Qué hay aquí</h1>
   <ol>
     <li><div><strong>Antes de empezar</strong><span>Qué es CLAC y las dos llaves que abren tu caja fuerte.</span></div></li>
-    <li><div><strong>Instalarla</strong><span>Y qué hacer con el aviso azul de Windows.</span></div></li>
+    <li><div><strong>Instalarla</strong><span>El aviso azul de Windows, y cómo se actualiza sola.</span></div></li>
     <li><div><strong>La primera vez</strong><span>La contraseña maestra, la clave secreta y el kit de emergencia.</span></div></li>
     <li><div><strong>Traerte tus contraseñas de Opera</strong><span>Exportar del navegador e importar en CLAC.</span></div></li>
-    <li><div><strong>La pantalla principal</strong><span>La barra lateral, la lista y la ficha de cada elemento.</span></div></li>
+    <li><div><strong>La pantalla principal</strong><span>La barra lateral, la lista, la ficha y el clic derecho.</span></div></li>
     <li><div><strong>Crear y editar</strong><span>Tipos de elemento, campos, generador, webs, etiquetas y archivos.</span></div></li>
     <li><div><strong>El generador</strong><span>Contraseñas aleatorias, memorables y PIN.</span></div></li>
     <li><div><strong>El acceso rápido</strong><span>Ctrl + Mayús + Espacio desde cualquier programa.</span></div></li>
     <li><div><strong>La extensión para Opera Air</strong><span>Instalarla y rellenar contraseñas en las webs.</span></div></li>
     <li><div><strong>Watchtower</strong><span>El repaso de tu caja: débiles, repetidas, filtradas, caducadas.</span></div></li>
-    <li><div><strong>Ordenar la caja</strong><span>Cajas fuertes, favoritos, etiquetas, archivo y papelera.</span></div></li>
-    <li><div><strong>La seguridad del día a día</strong><span>Bloqueo, portapapeles y lo que ve cada cosa.</span></div></li>
+    <li><div><strong>Ordenar la caja</strong><span>Cajas fuertes, etiquetas, archivo y papelera.</span></div></li>
+    <li><div><strong>La seguridad del día a día</strong><span>Bloqueo, Windows Hello y portapapeles.</span></div></li>
     <li><div><strong>Copias y cambiar de ordenador</strong><span>Copias automáticas, restaurar y exportar.</span></div></li>
     <li><div><strong>Atajos de teclado</strong><span>Todos, en una tabla.</span></div></li>
     <li><div><strong>Preguntas frecuentes</strong><span>Lo que más se pregunta, con respuesta corta.</span></div></li>
@@ -227,7 +228,7 @@ const html = `<!doctype html>
 
   <h2>Lo que CLAC no hace</h2>
   <ul>
-    <li><strong>No se conecta a internet</strong>, salvo una cosa y solo si tú la pides: comprobar si tus contraseñas han salido en alguna filtración (capítulo 10).</li>
+    <li><strong>No se conecta a internet</strong> más que para dos cosas: mirar al abrir si hay una versión nueva (capítulo 2), y comprobar si tus contraseñas han salido en alguna filtración, solo si tú lo pides (capítulo 10). En ninguna de las dos sale nada de tu caja fuerte.</li>
     <li><strong>No está en el móvil</strong>. Es solo para este ordenador.</li>
     <li><strong>No sincroniza</strong> entre ordenadores. Para llevarte la caja a otro equipo se usa una copia (capítulo 13).</li>
   </ul>
@@ -239,13 +240,17 @@ const html = `<!doctype html>
   <h1>Instalarla</h1>
   <p class="entradilla">Un instalador normal de Windows, como el de BONK.</p></div>
   <ol class="pasos">
-    <li>Abre el archivo <code>CLAC-${version}.0-Setup.exe</code>.</li>
+    <li>En la pestaña <strong>Releases</strong> de <code>github.com/i3SK87/clac</code>, descarga <code>CLAC-${version}.0-Setup.exe</code> (el de arriba es el más reciente) y ábrelo.</li>
     <li><strong>Windows va a protestar</strong> con una pantalla azul que dice «Windows protegió su PC». Es lo normal en programas que no han pasado por la firma de pago de Microsoft; no significa que haya nada malo. Pulsa <strong>Más información</strong> y luego <strong>Ejecutar de todas formas</strong>.</li>
     <li>Sigue el instalador. Al acabar tendrás CLAC en el escritorio y en el menú Inicio.</li>
   </ol>
   <div class="caja-nota truco"><strong>Si el instalador no pasa</strong>Hay un <code>.zip</code> portátil con la misma aplicación. Descomprímelo donde quieras y abre <code>CLAC.exe</code>.</div>
   <p>CLAC se queda en la bandeja del sistema, junto al reloj, aunque cierres la ventana: es lo que permite el acceso rápido y la extensión del navegador. Para salir del todo, clic derecho en el candado de la bandeja ▸ <strong>Salir</strong>.</p>
   <p>Tus datos no están en la carpeta del programa sino en <code>%APPDATA%\\CLAC</code>. Desinstalar CLAC no los borra.</p>
+  <h2>Se actualiza sola</h2>
+  <p>Solo hay que instalarla una vez. Al abrir, CLAC mira en GitHub si hay una versión nueva, como BONK. Si la hay, sale <strong>Actualización disponible</strong> debajo de Ajustes, en la barra lateral: al pulsarlo se descarga y, al acabar, te ofrece <strong>reiniciar</strong>. Si dices que no, se instala sola la próxima vez que salgas de CLAC. Tu caja fuerte no se toca.</p>
+  <p>Si no quieres que mire nada al abrir, desmarca <strong>Ajustes ▸ Acerca de ▸ Buscar versiones nuevas</strong>; ahí mismo tienes <strong>Buscar ahora</strong> para hacerlo a mano.</p>
+  <div class="caja-nota truco"><strong>Tras actualizar, la extensión</strong>Viene dentro de CLAC y se actualiza con ella. Para que Opera cargue la nueva, pulsa el botón de recargar de la extensión de CLAC en <code>opera://extensions</code>.</div>
 </section>
 
 <!-- 3 -->
@@ -293,7 +298,7 @@ const html = `<!doctype html>
   ${figura('t05-caja', 'Con «Google» elegido: el usuario, la contraseña oculta y el código de un solo uso con su cuenta atrás.')}
   <h2>La barra lateral</h2>
   <ul>
-    <li><strong>Todo</strong>, <strong>Favoritos</strong>, <strong>Watchtower</strong> (con el número de avisos) y el <strong>Generador</strong>.</li>
+    <li><strong>Todo</strong>, <strong>Watchtower</strong> (con el número de avisos) y el <strong>Generador</strong>.</li>
     <li><strong>Categorías</strong>: solo salen las que tienen algo (inicios de sesión, tarjetas, DNI…).</li>
     <li><strong>Cajas fuertes</strong> y <strong>Etiquetas</strong>, para ordenar (capítulo 11).</li>
     <li>Abajo, <strong>Archivo</strong>, <strong>Papelera</strong>, <strong>Ajustes</strong> y <strong>Bloquear</strong>.</li>
@@ -301,6 +306,10 @@ const html = `<!doctype html>
   <h2>Copiar</h2>
   <p><strong>Pulsa cualquier valor y se copia.</strong> Un aviso abajo a la derecha te dice qué has copiado y que se borrará del portapapeles en 90 segundos. Al pasar el ratón por un campo aparecen sus botones: el ojo para <strong>mostrarlo</strong>, las flechas para <strong>verlo en grande</strong> (carácter a carácter, para dictarlo o teclearlo en otro sitio) y <strong>copiar</strong>.</p>
   <p>La contraseña, al mostrarla, sale con las <strong>cifras en azul</strong> y los <strong>símbolos en naranja</strong>, para no confundir la O con el 0 ni la l con el 1.</p>
+  <h2>El clic derecho</h2>
+  <p>Como en BONK, casi todo tiene clic derecho. En un elemento de la lista salen, sin tener que elegirlo antes, <strong>copiar el usuario, la contraseña o el código</strong>, abrir su web, editar, duplicar, moverlo a otra caja fuerte, archivarlo o mandarlo a la papelera. En la papelera, <strong>Recuperar</strong> y <strong>Borrar para siempre</strong>.</p>
+  ${figura('t13-menu', 'Clic derecho en «Google» sin salir de «Banco Ejemplo». A la derecha, el atajo de cada cosa.')}
+  <p>En la ficha, el clic derecho sobre un campo tiene lo mismo que sus botones: <strong>copiar</strong>, <strong>mostrar</strong> y, en las contraseñas, <strong>ver en grande</strong>. Y sobre una caja fuerte de la barra lateral, <strong>editarla</strong>, <strong>crear otra</strong> o <strong>eliminarla</strong>.</p>
   <h2>Buscar</h2>
   <p>El buscador de arriba (<kbd>Ctrl</kbd><span class="mas">+</span><kbd>F</kbd>) busca en títulos, usuarios, webs y etiquetas, sin importar tildes ni mayúsculas. Con las flechas <kbd>↑</kbd> <kbd>↓</kbd> te mueves por la lista.</p>
 </section>
@@ -349,7 +358,7 @@ const html = `<!doctype html>
   <div class="cabeza"><div class="num">8</div>
   <h1>El acceso rápido</h1>
   <p class="entradilla">Desde cualquier programa, sin abrir CLAC: pulsa ${k('Ctrl', 'Mayús', 'Espacio')}.</p></div>
-  ${figura('t09-acceso', 'Antes de escribir nada propone tus favoritos y lo que más usas.', 'estrecha')}
+  ${figura('t09-acceso', 'Antes de escribir nada propone lo que más usas.', 'estrecha')}
   <ol class="pasos">
     <li>Pulsa ${k('Ctrl', 'Mayús', 'Espacio')} y empieza a escribir el nombre.</li>
     <li>Elige con las flechas y pulsa <kbd>Intro</kbd>: la contraseña queda copiada y el buscador se va.</li>
@@ -364,7 +373,7 @@ const html = `<!doctype html>
     <tr><td>${k('Ctrl', 'O')}</td><td>Abre el elemento en CLAC</td></tr>
     <tr><td><kbd>Esc</kbd></td><td>Borra la búsqueda, y si ya está vacía, cierra</td></tr>
   </table>
-  <p>Si CLAC está bloqueada, el acceso rápido te pide la contraseña maestra ahí mismo.</p>
+  <p>Si CLAC está bloqueada, el acceso rápido te pide la contraseña maestra ahí mismo, o Windows Hello si lo tienes activado (capítulo 12).</p>
 </section>
 
 <!-- 9 -->
@@ -381,14 +390,14 @@ const html = `<!doctype html>
     <li>Fija el candado de CLAC en la barra del navegador para tenerlo a mano.</li>
   </ol>
   <div class="recorte" style="aspect-ratio: 785 / 345">
-    <img src="${img('t11-ajustes')}" alt="" style="width: ${(1181 / 785) * 100}%; left: -${(250 / 785) * 100}%; top: -${(660 / 345) * 100}%">
+    <img src="${img('t11-ajustes')}" alt="" style="width: ${(1181 / 785) * 100}%; left: -${(250 / 785) * 100}%; top: -${(736 / 345) * 100}%">
   </div>
   <figcaption>La tarjeta «Navegador» de Ajustes, con la extensión ya conectada.</figcaption>
 
   <h2>Usarla</h2>
   <div class="pareja">
     <div>
-      <p>En la página de entrar de una web, pulsa el candado o ${k('Ctrl', 'Mayús', 'X')}. Arriba salen los elementos de <strong>esa web</strong>; debajo, tus favoritos. Si escribes, busca en toda la caja.</p>
+      <p>En la página de entrar de una web, pulsa el candado o ${k('Ctrl', 'Mayús', 'X')}. Arriba salen los elementos de <strong>esa web</strong>; debajo, lo que más usas. Si escribes, busca en toda la caja.</p>
       <p>Pulsa uno (o <kbd>Intro</kbd>) y CLAC <strong>rellena el usuario y la contraseña</strong> en el formulario. Luego entras tú: la extensión nunca envía el formulario por su cuenta.</p>
       <p>En la fila elegida tienes también botones para copiar el usuario, la contraseña o el código, y para abrir el elemento en CLAC.</p>
     </div>
@@ -403,6 +412,14 @@ const html = `<!doctype html>
       <p><strong>Guardar lo escrito</strong> guarda en CLAC el usuario y la contraseña que acabas de escribir en una página; si ya tenías esa web con ese usuario, le cambia la contraseña y la vieja queda en el historial.</p>
       <p><strong>Generar</strong> crea una contraseña nueva para las páginas de alta, la rellena en «contraseña» y «repítela», y te ofrece guardarla.</p>
     </div>
+  </div>
+  <div class="pareja">
+    <div>
+      <h3>Si CLAC está cerrada o bloqueada</h3>
+      <p>La extensión no guarda nada: cada vez se lo pregunta a CLAC. Si CLAC está <strong>cerrada</strong>, te lo dice y tiene un botón para abrirla. Para que esté siempre, activa <strong>Ajustes ▸ Arrancar con Windows</strong>: arranca en la bandeja, bloqueada y sin ventana.</p>
+      <p>Si está <strong>bloqueada</strong>, la desbloqueas desde la propia extensión, con la contraseña maestra o con <strong>Windows Hello</strong>. Con Hello, el diálogo de Windows se lleva el foco y el navegador cierra la ventanita: confirma y vuelve a pulsar el candado.</p>
+    </div>
+    ${figura('p04-extension-bloqueada', 'Bloqueada, y con Windows Hello activado.')}
   </div>
   <div class="caja-nota truco"><strong>Qué puede ver la extensión</strong>Solo la pestaña en la que la pulsas, y solo en ese momento. No lee las webs que visitas ni guarda nada: cada vez le pregunta a CLAC, que tiene que estar abierta (si no, te ofrece abrirla) y desbloqueada.</div>
 </section>
@@ -432,11 +449,9 @@ const html = `<!doctype html>
 <section class="capitulo">
   <div class="cabeza"><div class="num">11</div>
   <h1>Ordenar la caja</h1>
-  <p class="entradilla">Cuatro formas, que se pueden combinar.</p></div>
+  <p class="entradilla">Tres formas, que se pueden combinar.</p></div>
   <h2>Cajas fuertes</h2>
-  <p>Separan del todo: por ejemplo «Personal» y «Trabajo». Se crean con el <strong>+</strong> junto a «Cajas fuertes» en la barra lateral; el lápiz que aparece al pasar por encima de una permite cambiarle el nombre, el icono y el color. Para pasar un elemento a otra: menú <strong>⋯</strong> de la ficha ▸ <strong>Mover a otra caja fuerte…</strong>.</p>
-  <h2>Favoritos</h2>
-  <p>La estrella de la ficha. Los favoritos salen los primeros en el acceso rápido y en la extensión.</p>
+  <p>Separan del todo: por ejemplo «Personal» y «Trabajo». Se crean con el <strong>+</strong> junto a «Cajas fuertes» en la barra lateral; el lápiz que aparece al pasar por encima de una, o su clic derecho, permite cambiarle el nombre, el icono y el color, o eliminarla si está vacía. Para pasar un elemento a otra: menú <strong>⋯</strong> de la ficha ▸ <strong>Mover a otra caja fuerte…</strong>.</p>
   <h2>Etiquetas</h2>
   <p>Libres, las que quieras, y un elemento puede llevar varias: «banco», «streaming», «familia»… Salen en la barra lateral.</p>
   <h2>Archivo y papelera</h2>
@@ -452,13 +467,22 @@ const html = `<!doctype html>
   <div class="cabeza"><div class="num">12</div>
   <h1>La seguridad del día a día</h1>
   <p class="entradilla">Lo que CLAC hace sola, y lo que puedes ajustar en <strong>Ajustes ▸ Seguridad</strong>.</p></div>
-  ${figura('t04-bloqueo', 'Bloqueada: todo lo de la caja desaparece de la pantalla hasta que vuelves a poner la contraseña.', 'estrecha')}
+  ${figura('t04-bloqueo', 'Bloqueada: todo lo de la caja desaparece de la pantalla. Con Windows Hello activado, sale también su botón.', 'estrecha')}
   <ul>
     <li><strong>Bloqueo automático</strong> a los 10 minutos sin tocar el ordenador (puedes cambiarlo), al bloquear Windows con ${k('Win', 'L')} y al suspender el equipo.</li>
     <li><strong>Bloquear al momento</strong>: ${k('Ctrl', 'Mayús', 'L')} desde cualquier programa, o <strong>Bloquear</strong> en la barra lateral.</li>
     <li><strong>El portapapeles se vacía</strong> a los 90 segundos, si sigue ahí lo que copiaste. Y lo que copias de CLAC <strong>no queda en el historial de</strong> ${k('Win', 'V')}.</li>
     <li>Para lo delicado —exportar sin cifrar, ver la clave secreta, sacar el kit— te vuelve a pedir la contraseña maestra, aunque la caja esté abierta.</li>
   </ul>
+  <h2>Windows Hello</h2>
+  <p>Para no escribir la contraseña maestra cada vez que CLAC se bloquea: activa <strong>Ajustes ▸ Seguridad ▸ Desbloquear con Windows Hello</strong> (te pide confirmarlo una vez). Desde entonces, cuando CLAC se bloquee, entras con el <strong>PIN de Windows, la huella o la cara</strong>, lo que tengas configurado en Windows. Al volver a la ventana te lo pide solo, y en el acceso rápido, nada más abrirlo.</p>
+  <p>No sustituye a la contraseña maestra, la recuerda un rato. Al bloquearse, CLAC guarda la llave de la caja <strong>solo en memoria</strong> y cifrada con tu sesión de Windows; nunca va al disco. Por eso:</p>
+  <ul>
+    <li><strong>Al abrir CLAC</strong> (y al reiniciar el ordenador) siempre va la contraseña maestra.</li>
+    <li><strong>Cada catorce días</strong>, también: es la única que no tiene arreglo si se olvida, y así no pierdes la costumbre.</li>
+    <li>Si Windows dice que ha habido <strong>demasiados intentos</strong>, vuelve a pedir la contraseña maestra.</li>
+  </ul>
+  <div class="caja-nota importante"><strong>¿Y un PIN de CLAC en vez de la contraseña?</strong>No: la contraseña maestra es con lo que se cifra la caja, y un PIN de cuatro cifras son diez mil combinaciones, que se prueban en muy poco tiempo. Windows Hello da la comodidad sin eso: la llave no sale nunca de la memoria, y el PIN de Windows lo protege Windows, que bloquea los intentos.</div>
   <h2>Cambiar la contraseña maestra</h2>
   <p><strong>Ajustes ▸ Contraseña maestra y clave secreta ▸ Cambiar la contraseña maestra</strong>. La clave secreta y el kit siguen valiendo (apunta la contraseña nueva en el kit).</p>
 </section>
@@ -484,14 +508,15 @@ const html = `<!doctype html>
 </section>
 
 <!-- 14 -->
-<section class="capitulo pagina-nueva">
-  <div class="num">14</div>
-  <h1>Atajos de teclado</h1>
+<section class="capitulo">
+  <div class="cabeza"><div class="num">14</div>
+  <h1>Atajos de teclado</h1></div>
   <table>
     <tr><th>Dónde</th><th>Atajo</th><th>Qué hace</th></tr>
     <tr><td>Cualquier programa</td><td>${k('Ctrl', 'Mayús', 'Espacio')}</td><td>Abre el acceso rápido</td></tr>
     <tr><td>Cualquier programa</td><td>${k('Ctrl', 'Mayús', 'L')}</td><td>Bloquea CLAC</td></tr>
     <tr><td>Opera Air</td><td>${k('Ctrl', 'Mayús', 'X')}</td><td>Abre la extensión</td></tr>
+    <tr><td>CLAC</td><td>Clic derecho</td><td>El menú del elemento, del campo o de la caja fuerte</td></tr>
     <tr><td>CLAC</td><td>${k('Ctrl', 'N')}</td><td>Nuevo elemento</td></tr>
     <tr><td>CLAC</td><td>${k('Ctrl', 'F')}</td><td>Buscar</td></tr>
     <tr><td>CLAC</td><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Moverse por la lista</td></tr>
@@ -516,8 +541,12 @@ const html = `<!doctype html>
   <p>No se puede recuperar. Mira si la apuntaste en el kit de emergencia. Si no, la caja fuerte no se puede abrir: habría que empezar una nueva.</p>
   <h3>He perdido el kit de emergencia.</h3>
   <p>Mientras sigas en este ordenador no pasa nada: abre CLAC y, en <strong>Ajustes ▸ Contraseña maestra y clave secreta</strong>, pulsa <strong>Guardar el kit de emergencia</strong> para sacar otro. Hazlo ya: sin él no podrías restaurar una copia en otro equipo.</p>
+  <h3>¿Puedo entrar con un PIN?</h3>
+  <p>Con el de Windows, sí: activa Windows Hello (capítulo 12). La contraseña maestra la seguirá pidiendo al abrir CLAC y cada catorce días.</p>
+  <h3>¿La extensión funciona con CLAC cerrada?</h3>
+  <p>No: las llaves las tiene CLAC. La extensión te ofrece abrirla. Con <strong>Arrancar con Windows</strong> activado estará siempre en la bandeja.</p>
   <h3>¿Se conecta a internet?</h3>
-  <p>No, salvo cuando pulsas <strong>Comprobar ahora</strong> en Watchtower, y ni siquiera entonces viaja ninguna contraseña. Los iconos de las webs tampoco se descargan: el cuadrado de color con la inicial sale del propio nombre de la web.</p>
+  <p>Para dos cosas: mirar al abrir si hay una versión nueva (se apaga en Ajustes ▸ Acerca de) y, cuando pulsas <strong>Comprobar ahora</strong> en Watchtower, preguntar por filtraciones. En ninguna viaja una contraseña. Los iconos de las webs no se descargan: el cuadrado de color con la inicial sale del propio nombre de la web.</p>
   <h3>¿Qué pasa si alguien me roba el ordenador?</h3>
   <p>Con CLAC bloqueada, la caja fuerte está cifrada y no se abre sin tu contraseña maestra. Por eso importa que sea buena y que el bloqueo automático esté encendido.</p>
   <h3>¿Por qué la extensión se instala en «modo desarrollador»?</h3>
@@ -537,7 +566,11 @@ const html = `<!doctype html>
 
 app.whenReady().then(async () => {
   const w = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
-  await w.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+  // Con las capturas dentro pasa de los 2 MB que admite una URL data:, así que va por archivo.
+  const carpeta = mkdtempSync(join(tmpdir(), 'clac-tutorial-'))
+  const pagina = join(carpeta, 'tutorial.html')
+  writeFileSync(pagina, html)
+  await w.loadFile(pagina)
   const pdf = await w.webContents.printToPDF({
     printBackground: true,
     preferCSSPageSize: true,
@@ -545,5 +578,6 @@ app.whenReady().then(async () => {
   const destino = join(__dirname, 'Tutorial de CLAC.pdf')
   writeFileSync(destino, pdf)
   console.log(`${destino} (${Math.round(pdf.length / 1024)} KB)`)
+  rmSync(carpeta, { recursive: true, force: true })
   app.quit()
 })

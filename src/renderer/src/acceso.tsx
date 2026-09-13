@@ -5,10 +5,13 @@
  * para que el foco vuelva al programa de antes y baste con pegar. Esta ventana
  * no ve nunca un secreto: la lista es de resúmenes y la copia la hace el
  * proceso principal.
+ *
+ * Bloqueada y con Windows Hello listo, lo pide nada más abrirse: lo acabas de
+ * abrir tú, así que estás delante.
  */
 import { StrictMode, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Lock, Search } from 'lucide-react'
+import { Lock, ScanFace, Search } from 'lucide-react'
 import { aplicarTemaGuardado, recordarTema, vestir } from 'casa/tema'
 import { mensajeDeError } from 'casa/ui'
 import type { ElementoLista, EstadoSesion } from '@shared/tipos'
@@ -31,7 +34,9 @@ function Acceso(): ReactNode {
   const [mensaje, setMensaje] = useState<{ texto: string; error?: boolean } | null>(null)
   const [contrasena, setContrasena] = useState('')
   const [abriendo, setAbriendo] = useState(false)
+  const [helloListo, setHelloListo] = useState(false)
   const campo = useRef<HTMLInputElement>(null)
+  const pidiendoHello = useRef(false)
   const lista = useRef<HTMLDivElement>(null)
 
   const cargar = useCallback(async (q: string) => {
@@ -43,6 +48,25 @@ function Acceso(): ReactNode {
     }
   }, [])
 
+  const usarHello = useCallback(async () => {
+    if (pidiendoHello.current) return
+    pidiendoHello.current = true
+    setAbriendo(true)
+    setMensaje({ texto: 'Confírmalo en Windows…' })
+    try {
+      await api.sesion.desbloquearHello()
+      setMensaje(null)
+    } catch (e) {
+      const texto = mensajeDeError(e)
+      setMensaje(texto === 'Cancelado.' ? null : { texto, error: true })
+      setHelloListo((await api.sesion.hello()).listo)
+    } finally {
+      pidiendoHello.current = false
+      setAbriendo(false)
+      setTimeout(() => campo.current?.focus(), 0)
+    }
+  }, [])
+
   const alMostrar = useCallback(async () => {
     setConsulta('')
     setMensaje(null)
@@ -51,7 +75,12 @@ function Acceso(): ReactNode {
     setSesion(estado)
     if (estado === 'abierta') await cargar('')
     setTimeout(() => campo.current?.focus(), 0)
-  }, [cargar])
+    if (estado === 'bloqueada') {
+      const listo = (await api.sesion.hello()).listo
+      setHelloListo(listo)
+      if (listo) void usarHello()
+    }
+  }, [cargar, usarHello])
 
   useEffect(() => {
     void alMostrar()
@@ -162,6 +191,11 @@ function Acceso(): ReactNode {
                   if (e.key === 'Escape') void api.acceso.ocultar()
                 }}
               />
+              {helloListo && (
+                <button className="btn" onClick={() => void usarHello()} disabled={abriendo}>
+                  <ScanFace size={15} /> Usar Windows Hello
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -195,7 +229,7 @@ function Acceso(): ReactNode {
           onKeyDown={tecla}
         />
       </div>
-      <div className="acceso-rotulo rotulo">{consulta.trim() ? 'Resultados' : 'Favoritos y más usados'}</div>
+      <div className="acceso-rotulo rotulo">{consulta.trim() ? 'Resultados' : 'Lo que más usas'}</div>
       <div className="acceso-lista" ref={lista} role="listbox" aria-label="Resultados">
         {resultados.length === 0 && <p className="acceso-vacio small muted">{consulta ? `Nada se llama «${consulta}».` : 'La caja está vacía.'}</p>}
         {resultados.map((e, i) => (

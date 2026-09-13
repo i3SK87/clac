@@ -14,6 +14,8 @@ export const NOMBRE_ANFITRION = 'com.clac.navegador'
 export type Peticion =
   | { id: number; tipo: 'estado' }
   | { id: number; tipo: 'desbloquear'; contrasena: string }
+  /** Con Windows Hello: el diálogo sale sobre el navegador. */
+  | { id: number; tipo: 'desbloquearHello' }
   | { id: number; tipo: 'buscar'; url: string; consulta: string }
   | { id: number; tipo: 'credenciales'; elementoId: string }
   | { id: number; tipo: 'copiar'; elementoId: string; que: 'usuario' | 'contrasena' | 'totp' }
@@ -37,6 +39,8 @@ export interface EstadoNavegador {
   tema: Tema
   paleta: Paleta
   version: string
+  /** Bloqueada, se puede abrir con Windows Hello en vez de con la contraseña. */
+  hello: boolean
 }
 
 export interface ElementoNavegador {

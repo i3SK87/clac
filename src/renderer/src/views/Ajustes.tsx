@@ -1,5 +1,5 @@
 /**
- * Ajustes, en tarjetas como los de BONK: seguridad, acceso rápido, aspecto,
+ * Ajustes, en tarjetas como los de BONK: seguridad (con Windows Hello), acceso rápido, aspecto,
  * contraseña maestra y kit de emergencia, y los datos (copias, importar y
  * exportar).
  */
@@ -13,9 +13,111 @@ import type { InfoDatos, InfoNavegador, Tema, VistaImportacion } from '@shared/t
 import { api, useStore } from '../lib/store'
 import { PedirContrasena } from '../components/PedirContrasena'
 import { Medidor } from '../components/piezas'
+import { ConfirmarReinicio, contarActualizacion, useActualizacion } from '../components/Actualizacion'
 
 const MINUTOS = [1, 2, 5, 10, 15, 30, 60, 0]
 const SEGUNDOS = [30, 60, 90, 120, 300, 0]
+
+/** La versión y el actualizador, como la tarjeta de BONK. */
+function AcercaDe({ version }: { version: string }): ReactNode {
+  const { ajustes, cambiarAjustes, run } = useStore()
+  const e = useActualizacion()
+  const [reiniciando, setReiniciando] = useState(false)
+  return (
+    <section className="card">
+      <div className="card-header">
+        <h2>Acerca de</h2>
+      </div>
+      <div className="card-body col" style={{ gap: 14 }}>
+        <p className="small muted">CLAC, versión {version} · de la misma casa que BONK · tu caja fuerte se queda en este ordenador</p>
+        <div className="divider" />
+        <Checkbox
+          checked={ajustes.buscarVersiones}
+          onChange={(v) => void cambiarAjustes({ buscarVersiones: v })}
+          label="Buscar versiones nuevas"
+          hint="Al abrir, en GitHub. Solo se piden los archivos de la versión publicada: nada de tu caja fuerte sale del ordenador."
+        />
+        <div className="row">
+          <div className="small muted" style={{ maxWidth: 460 }}>
+            {contarActualizacion(e)}
+          </div>
+          <div className="spacer" />
+          {e.fase === 'lista' ? (
+            <button className="btn primary small" onClick={() => setReiniciando(true)}>
+              Reiniciar e instalar
+            </button>
+          ) : e.fase === 'disponible' ? (
+            <button className="btn primary small" onClick={() => void run(() => api.actualizacion.descargar())}>
+              Descargar
+            </button>
+          ) : (
+            <button
+              className="btn small"
+              disabled={e.fase === 'buscando' || e.fase === 'descargando'}
+              onClick={() => void run(() => api.actualizacion.buscar())}
+            >
+              Buscar ahora
+            </button>
+          )}
+        </div>
+      </div>
+      {reiniciando && <ConfirmarReinicio version={e.version} alCerrar={() => setReiniciando(false)} />}
+    </section>
+  )
+}
+
+/**
+ * Windows Hello. Encenderlo pide confirmar una vez, para no fiarse de algo que
+ * no se ha visto funcionar. Apagarlo no pide nada: es quitar un atajo.
+ */
+function AjusteHello(): ReactNode {
+  const { toast, fail } = useAvisos()
+  const { ajustes, cambiarAjustes } = useStore()
+  // undefined: todavía mirando; null: no se ha podido saber.
+  const [disponible, setDisponible] = useState<string | null | undefined>(undefined)
+  const [activando, setActivando] = useState(false)
+
+  useEffect(() => {
+    let vivo = true
+    api.hello
+      .disponible()
+      .then((d) => vivo && setDisponible(d))
+      .catch(() => vivo && setDisponible(null))
+    return () => {
+      vivo = false
+    }
+  }, [])
+
+  const puede = disponible === 'Available'
+  const pista =
+    disponible === undefined
+      ? 'Mirando si este equipo tiene Windows Hello…'
+      : puede || ajustes.windowsHello
+        ? 'Cuando CLAC se bloquee, vuelves a entrar con el PIN de Windows, la huella o la cara. Al abrir CLAC, y cada catorce días, sigue pidiendo la contraseña maestra.'
+        : disponible === 'NotConfiguredForUser'
+          ? 'Antes hay que configurarlo en Windows: Configuración ▸ Cuentas ▸ Opciones de inicio de sesión.'
+          : 'Este equipo no puede usar Windows Hello ahora mismo.'
+
+  return (
+    <Checkbox
+      checked={ajustes.windowsHello}
+      disabled={!ajustes.windowsHello && (!puede || activando)}
+      label={activando ? 'Confírmalo en Windows…' : 'Desbloquear con Windows Hello'}
+      hint={pista}
+      onChange={(v) => {
+        if (!v) return void cambiarAjustes({ windowsHello: false })
+        setActivando(true)
+        api.hello
+          .activar()
+          .then(() => toast('Windows Hello, activado. Lo usarás la próxima vez que CLAC se bloquee.'))
+          .catch((e: unknown) => {
+            if (mensajeDeError(e) !== 'Cancelado.') fail(e)
+          })
+          .finally(() => setActivando(false))
+      }}
+    />
+  )
+}
 
 export function VistaAjustes(): ReactNode {
   const { toast } = useAvisos()
@@ -64,6 +166,7 @@ export function VistaAjustes(): ReactNode {
             onChange={(v) => void cambiarAjustes({ bloquearAlSuspender: v })}
             label="Bloquear al suspender el equipo"
           />
+          <AjusteHello />
           <div className="divider" />
           <div className="ajuste-fila">
             <div>
@@ -200,9 +303,7 @@ export function VistaAjustes(): ReactNode {
         </div>
       </section>
 
-      <p className="small subtle ajustes-pie">
-        CLAC {version} · de la misma casa que BONK · todo se queda en este ordenador
-      </p>
+      <AcercaDe version={version} />
 
       {modal === 'contrasena' && <CambiarContrasena alCerrar={() => setModal(null)} />}
       {modal === 'kit' && (

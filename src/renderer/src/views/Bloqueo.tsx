@@ -4,9 +4,14 @@
  * Toda la ventana del color de la barra lateral, que es el único que es oscuro
  * en todas las paletas, con la marca y un solo campo. Si en este equipo falta
  * la clave secreta —se ha traído la carpeta de otro ordenador—, se pide también.
+ *
+ * Con Windows Hello activado y la clave guardada, sale además su botón, y se
+ * pide solo al volver a la ventana. Solo al volver: si CLAC se ha bloqueado
+ * con la ventana delante es porque te has ido, y un diálogo saltando en ese
+ * momento sería para nadie.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Eye, EyeOff, LockOpen } from 'lucide-react'
+import { Eye, EyeOff, LockOpen, ScanFace } from 'lucide-react'
 import { Field, Modal, mensajeDeError } from 'casa/ui'
 import { api } from '../lib/store'
 import marca from '../../../../resources/icon.png'
@@ -18,14 +23,53 @@ export function Bloqueo({ sinClave }: { sinClave: boolean }): ReactNode {
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [olvido, setOlvido] = useState(false)
+  const [hello, setHello] = useState<{ activo: boolean; listo: boolean }>({ activo: false, listo: false })
+  const [conHello, setConHello] = useState(false)
   const campo = useRef<HTMLInputElement>(null)
+  const pidiendo = useRef(false)
+  /** Cuándo acabó el último intento: el foco que vuelve al cerrarse el diálogo no es «volver». */
+  const acabo = useRef(0)
+
+  const usarHello = async (): Promise<void> => {
+    if (pidiendo.current) return
+    pidiendo.current = true
+    setConHello(true)
+    setError(null)
+    try {
+      await api.sesion.desbloquearHello()
+    } catch (e) {
+      const texto = mensajeDeError(e)
+      if (texto !== 'Cancelado.') setError(texto)
+      setHello(await api.sesion.hello())
+      campo.current?.focus()
+    } finally {
+      pidiendo.current = false
+      acabo.current = Date.now()
+      setConHello(false)
+    }
+  }
 
   useEffect(() => {
+    let vivo = true
     campo.current?.focus()
-    // Al volver a la ventana, el cursor tiene que estar ya en el campo.
-    const alVolver = (): void => campo.current?.focus()
+    void api.sesion.hello().then((h) => vivo && setHello(h))
+    // Al volver a la ventana, el cursor tiene que estar ya en el campo; y si se
+    // puede con Hello, se pide.
+    const alVolver = (): void => {
+      campo.current?.focus()
+      void api.sesion.hello().then((h) => {
+        if (!vivo) return
+        setHello(h)
+        // Si lo acabas de cancelar, el foco vuelve aquí: pedirlo otra vez sería un bucle.
+        if (h.listo && !sinClave && Date.now() - acabo.current > 3000) void usarHello()
+      })
+    }
     window.addEventListener('focus', alVolver)
-    return () => window.removeEventListener('focus', alVolver)
+    return () => {
+      vivo = false
+      window.removeEventListener('focus', alVolver)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const abrir = async (): Promise<void> => {
@@ -98,6 +142,17 @@ export function Bloqueo({ sinClave }: { sinClave: boolean }): ReactNode {
         <button className="btn primary puerta-boton" type="submit" disabled={!contrasena || ocupado || (sinClave && !clave)}>
           <LockOpen size={16} /> {ocupado ? 'Abriendo…' : 'Desbloquear'}
         </button>
+        {hello.listo && !sinClave && (
+          <button type="button" className="btn puerta-boton puerta-hello" onClick={() => void usarHello()} disabled={conHello || ocupado}>
+            <ScanFace size={16} /> {conHello ? 'Confírmalo en Windows…' : 'Usar Windows Hello'}
+          </button>
+        )}
+        {hello.activo && !hello.listo && !sinClave && (
+          <p className="puerta-nota">
+            Windows Hello vuelve a funcionar en cuanto entres con la contraseña maestra. Hace falta al abrir CLAC y cada
+            catorce días.
+          </p>
+        )}
         <button type="button" className="link puerta-olvido" onClick={() => setOlvido(true)}>
           ¿Has olvidado la contraseña?
         </button>

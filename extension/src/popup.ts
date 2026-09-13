@@ -51,7 +51,8 @@ function pedir<T>(peticion: SinId<Peticion>): Promise<T> {
     const plazo = window.setTimeout(() => {
       esperando.delete(id)
       rechazar(new Error('CLAC no contesta.'))
-    }, 10_000)
+      // Windows Hello espera a que la persona confirme: ahí no hay prisa.
+    }, peticion.tipo === 'desbloquearHello' ? 180_000 : 10_000)
     esperando.set(id, {
       resolver: (r) => {
         window.clearTimeout(plazo)
@@ -134,7 +135,7 @@ async function empezar(): Promise<void> {
     )
     document.documentElement.setAttribute('data-palette', estado.paleta)
     if (estado.sesion === 'abierta') await pintarAbierta()
-    else if (estado.sesion === 'bloqueada') pintarBloqueada()
+    else if (estado.sesion === 'bloqueada') pintarBloqueada(estado.hello)
     else pintarSinPreparar()
   } catch (e) {
     if (e instanceof Cerrada) pintarCerrada()
@@ -196,7 +197,7 @@ function pintarSinPreparar(): void {
   )
 }
 
-function pintarBloqueada(): void {
+function pintarBloqueada(hello = false): void {
   const campo = h('input', {
     className: 'input',
     type: 'password',
@@ -232,10 +233,34 @@ function pintarBloqueada(): void {
     h('h2', {}, 'CLAC está bloqueada'),
     campo,
     boton,
+    hello && botonHello(error),
     error
   )
   pintar(formulario)
   campo.focus()
+}
+
+/**
+ * Desbloquear con Windows Hello. El diálogo sale sobre el navegador y se lleva
+ * el foco, y el navegador cierra esta ventanita al perderlo: CLAC se abre igual,
+ * y basta con volver a pulsar el candado.
+ */
+function botonHello(error: HTMLElement): HTMLElement {
+  const b = h('button', { className: 'btn ancho', type: 'button' }, icono('hello', 15), 'Usar Windows Hello') as HTMLButtonElement
+  b.addEventListener('click', async () => {
+    b.disabled = true
+    b.lastChild!.textContent = 'Confírmalo en Windows…'
+    error.replaceChildren(mensaje('Si esta ventanita se cierra, vuelve a pulsar el candado al confirmar.'))
+    try {
+      await pedir({ tipo: 'desbloquearHello' })
+      await pintarAbierta()
+    } catch (e) {
+      b.disabled = false
+      b.lastChild!.textContent = 'Usar Windows Hello'
+      error.replaceChildren(mensaje(e instanceof Error ? e.message : String(e)))
+    }
+  })
+  return b
 }
 
 /* ---------- Abierta ---------- */
@@ -307,12 +332,12 @@ function pintarLista(lista: HTMLElement, avisos: HTMLElement, consulta: string):
       h(
         'div',
         { className: 'ext-rotulo' },
-        coinciden ? `En ${dominioBase(pestana?.url ?? '')}` : sePuedeRellenar() ? 'Nada de esta web · tus favoritos' : 'Tus favoritos'
+        coinciden ? `En ${dominioBase(pestana?.url ?? '')}` : sePuedeRellenar() ? 'Nada de esta web · lo que más usas' : 'Lo que más usas'
       )
     )
   }
   elementos.forEach((e, i) => {
-    if (!consulta && coinciden && i === coinciden && i < elementos.length) filas.push(h('div', { className: 'ext-rotulo' }, 'Favoritos'))
+    if (!consulta && coinciden && i === coinciden && i < elementos.length) filas.push(h('div', { className: 'ext-rotulo' }, 'Lo que más usas'))
     const dominio = dominioDe(e.web)
     const avatar = h('span', { className: 'ext-avatar', style: `background:${colorDe(dominio || e.titulo)}` }, inicialDe(e.titulo))
     const acciones = h(

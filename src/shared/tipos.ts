@@ -184,6 +184,23 @@ export interface Ajustes {
   ultimaCopia: string | null
   /** La extensión del navegador puede hablar con CLAC. */
   navegador: boolean
+  /** Tras bloquearse, se puede volver a entrar con Windows Hello (ver main/hello.ts). */
+  windowsHello: boolean
+  /** Al abrir, mirar en GitHub si hay versión nueva (ver main/actualizaciones.ts). */
+  buscarVersiones: boolean
+}
+
+/* ---------- Actualizaciones ---------- */
+
+export interface EstadoActualizacion {
+  /** «disponible» espera a que se pulse: no se baja nada hasta entonces. */
+  fase: 'ociosa' | 'buscando' | 'disponible' | 'descargando' | 'lista' | 'error'
+  version: string | null
+  /** De 0 a 100 mientras se descarga. */
+  porcentaje: number
+  /** Cuándo se miró por última vez sin fallar, en ISO. */
+  comprobadaEn: string | null
+  mensaje: string | null
 }
 
 /* ---------- Navegador ---------- */

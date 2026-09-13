@@ -13,5 +13,7 @@ export const AJUSTES_INICIALES: Ajustes = {
   cerrarABandeja: true,
   ordenLista: 'titulo',
   ultimaCopia: null,
-  navegador: false
+  navegador: false,
+  windowsHello: false,
+  buscarVersiones: true
 }

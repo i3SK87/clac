@@ -17,6 +17,8 @@ import {
   claveDeEsteEquipo,
   crearCaja,
   desbloquear,
+  desbloquearConHello,
+  estadoHelloSesion,
   estadoSesion,
   exigirContrasena,
   hacerCopiaAhora,
@@ -34,6 +36,9 @@ import { generarClaveSsh } from './boveda/ssh'
 import { tipoDeArchivo, CajaFuerte } from './boveda/boveda'
 import { contarCopias, copiarA } from './boveda/db'
 import { registrar, registrarFallo } from './registro'
+import { estadoHello, pedirHello } from './ayudante'
+import { motivoHello } from './hello'
+import { buscarActualizacion, descargarActualizacion, estadoActualizacion, instalarActualizacion } from './actualizaciones'
 import { contrasenaDe, todosLosCampos, usuarioDe, totpDe } from '@shared/categorias'
 import { leerTotp, codigoTotp } from '@shared/totp'
 import { revisar } from '@shared/watchtower'
@@ -85,6 +90,27 @@ function segundosPortapapeles(): number {
   return ajustes().portapapelesSegundos
 }
 
+/**
+ * Como `handle`, pero el manejador recibe primero la ventana que ha pedido, en
+ * el número que entiende Windows: para sacar el diálogo de Hello encima de ella.
+ */
+function handleConVentana(canal: string, fn: (ventana: bigint, ...args: never[]) => unknown): void {
+  ipcMain.handle(canal, async (evento, ...args: unknown[]) => {
+    try {
+      const w = BrowserWindow.fromWebContents(evento.sender)
+      const hwnd = w ? w.getNativeWindowHandle().readBigUInt64LE(0) : 0n
+      try {
+        return { ok: true, data: await (fn as (...a: unknown[]) => unknown)(hwnd, ...args) }
+      } finally {
+        // Cerrado el diálogo, el foco vuelve a la ventana que lo pidió.
+        if (w && !w.isDestroyed() && w.isVisible()) w.focus()
+      }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  })
+}
+
 export function registrarIpc(entorno: Entorno): void {
   const ventana = (): BrowserWindow => {
     const w = entorno.ventanaPrincipal()
@@ -98,6 +124,21 @@ export function registrarIpc(entorno: Entorno): void {
   handle('sesion:crear', (contrasena: string) => crearCaja(contrasena))
   handle('sesion:desbloquear', (contrasena: string, clave?: string) => desbloquear(contrasena, clave))
   handle('sesion:bloquear', () => bloquear('a mano'))
+  handle('sesion:hello', () => estadoHelloSesion())
+  handleConVentana('sesion:desbloquearHello', (ventana: bigint) => desbloquearConHello(ventana))
+
+  /* ---------- Windows Hello ---------- */
+
+  handle('hello:disponible', () => estadoHello())
+  // Encenderlo pide confirmar una vez: así se sabe que funciona antes de fiarse de él.
+  handleConVentana('hello:activar', async (ventana: bigint) => {
+    const r = await pedirHello('Usar Windows Hello para desbloquear CLAC', ventana)
+    if (r !== 'Verified') throw new Error(motivoHello(r))
+    const nuevos = cambiarAjustes({ windowsHello: true })
+    entorno.alCambiarAjustes(nuevos)
+    registrar('sesión', 'Windows Hello activado')
+    return nuevos
+  })
   handle('sesion:cambiarContrasena', (actual: string, nueva: string) => {
     const clave = claveDeEsteEquipo()
     laCaja().cambiarContrasena(actual, nueva, clave.secreto)
@@ -148,6 +189,13 @@ export function registrarIpc(entorno: Entorno): void {
     restaurarCopia(ruta, contrasena, clave)
     entorno.alCambiarAjustes(ajustes())
   })
+
+  /* ---------- Actualizaciones ---------- */
+
+  handle('actualizacion:estado', () => estadoActualizacion())
+  handle('actualizacion:buscar', () => buscarActualizacion())
+  handle('actualizacion:descargar', () => descargarActualizacion())
+  handle('actualizacion:instalar', () => instalarActualizacion())
 
   /* ---------- Ajustes ---------- */
 
@@ -200,11 +248,6 @@ export function registrarIpc(entorno: Entorno): void {
   })
   handle('elementos:duplicar', (id: string) => {
     const e = laCaja().duplicar(id)
-    datosCambiados()
-    return e
-  })
-  handle('elementos:favorito', (id: string) => {
-    const e = laCaja().alternarFavorito(id)
     datosCambiados()
     return e
   })

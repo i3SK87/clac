@@ -7,6 +7,7 @@ import type {
   Elemento,
   ElementoEntrada,
   ElementoLista,
+  EstadoActualizacion,
   EstadoElemento,
   EstadoSesion,
   InfoDatos,
@@ -50,11 +51,18 @@ const api = {
     crear: (contrasena: string) => llamar<string>('sesion:crear', contrasena),
     desbloquear: (contrasena: string, clave?: string) => llamar<void>('sesion:desbloquear', contrasena, clave),
     bloquear: () => llamar<void>('sesion:bloquear'),
+    hello: () => llamar<{ activo: boolean; listo: boolean }>('sesion:hello'),
+    desbloquearHello: () => llamar<void>('sesion:desbloquearHello'),
     cambiarContrasena: (actual: string, nueva: string) => llamar<void>('sesion:cambiarContrasena', actual, nueva),
     claveSecreta: (contrasena: string) => llamar<string>('sesion:claveSecreta', contrasena),
     kit: (contrasena: string) => llamar<string | null>('sesion:kit', contrasena),
     restaurarElegir: () => llamar<{ ruta: string; nombre: string; idCuenta: string } | null>('sesion:restaurarElegir'),
     restaurar: (ruta: string, contrasena: string, clave: string) => llamar<void>('sesion:restaurar', ruta, contrasena, clave)
+  },
+  hello: {
+    /** Lo que dice Windows: `Available` si se puede usar; `null` si no se sabe. */
+    disponible: () => llamar<string | null>('hello:disponible'),
+    activar: () => llamar<Ajustes>('hello:activar')
   },
   ajustes: {
     leer: () => llamar<Ajustes>('ajustes:leer'),
@@ -74,7 +82,6 @@ const api = {
     vaciarPapelera: () => llamar<number>('elementos:vaciarPapelera'),
     mover: (ids: string[], bovedaId: string) => llamar<void>('elementos:mover', ids, bovedaId),
     duplicar: (id: string) => llamar<Elemento>('elementos:duplicar', id),
-    favorito: (id: string) => llamar<ElementoLista>('elementos:favorito', id),
     historial: (id: string) => llamar<VersionHistorial[]>('elementos:historial', id),
     restaurarVersion: (id: string, versionId: string) => llamar<Elemento>('elementos:restaurarVersion', id, versionId)
   },
@@ -113,6 +120,14 @@ const api = {
   app: {
     version: () => llamar<string>('app:version')
   },
+  actualizacion: {
+    estado: () => llamar<EstadoActualizacion>('actualizacion:estado'),
+    buscar: () => llamar<EstadoActualizacion>('actualizacion:buscar'),
+    /** Arranca la descarga; el progreso llega por `en.actualizacion`. */
+    descargar: () => llamar<boolean>('actualizacion:descargar'),
+    /** Cierra y vuelve a abrir ya actualizada. `false` si no había nada listo. */
+    instalar: () => llamar<boolean>('actualizacion:instalar')
+  },
   datos: {
     info: () => llamar<InfoDatos>('datos:info'),
     copiaAhora: () => llamar<string>('datos:copiaAhora'),
@@ -132,7 +147,8 @@ const api = {
     menu: (fn: (accion: string) => void) => escuchar('menu', fn),
     abrirElemento: (fn: (id: string) => void) => escuchar('abrir:elemento', fn),
     accesoMostrado: (fn: () => void) => escuchar('acceso:mostrado', fn),
-    progresoFiltradas: (fn: (hechas: number, total: number) => void) => escuchar('watchtower:progreso', fn)
+    progresoFiltradas: (fn: (hechas: number, total: number) => void) => escuchar('watchtower:progreso', fn),
+    actualizacion: (fn: (e: EstadoActualizacion) => void) => escuchar('actualizacion:cambio', fn)
   }
 }
 

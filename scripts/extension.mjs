@@ -38,7 +38,8 @@ const USADOS = {
   clock: 'Clock',
   alert: 'TriangleAlert',
   copy: 'Copy',
-  refresh: 'RefreshCw'
+  refresh: 'RefreshCw',
+  hello: 'ScanFace'
 }
 const iconos = Object.fromEntries(
   Object.entries(USADOS).map(([clave, nombre]) => [clave, renderToStaticMarkup(createElement(lucide[nombre], { strokeWidth: 1.8 }))])

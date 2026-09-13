@@ -433,19 +433,28 @@ async function main(): Promise<void> {
     caja.desbloquear('una contraseña bastante larga', clave.secreto)
     equal('con las dos, abre y está todo', caja.listar()[0].titulo, 'Banco Santander')
 
+    // Lo que usa Windows Hello: la clave de la cuenta guardada al bloquear.
+    const guardada = caja.copiaClaveCuenta()
+    caja.bloquear()
+    check('la copia sobrevive al bloqueo', guardada.some((b) => b !== 0))
+    caja.desbloquearConClaveCuenta(guardada)
+    guardada.fill(0)
+    equal('con la clave de la cuenta abre sin contraseña', caja.listar()[0].titulo, 'Banco Santander')
+    check('y borrar la de fuera no cierra la caja', caja.abierta() && caja.obtener(caja.listar()[0].id).titulo === 'Banco Santander')
+    caja.bloquear()
+    throws('con otra clave no abre', () => caja.desbloquearConClaveCuenta(Buffer.alloc(32, 7)), ErrorContrasena)
+    check('y se queda bloqueada', !caja.abierta())
+    caja.desbloquear('una contraseña bastante larga', clave.secreto)
+
     // Historial
     const editado = caja.guardar({ ...caja.obtener(e1.id), titulo: 'Santander' })
     equal('editar deja versión', caja.historial(e1.id).length, 1)
     equal('con lo de antes', caja.historial(e1.id)[0].titulo, 'Banco Santander')
-    const modificado = editado.modificado
-    caja.alternarFavorito(e1.id)
-    check('el favorito se marca', caja.obtener(e1.id).favorito)
-    equal('pero no deja versión', caja.historial(e1.id).length, 1)
-    equal('ni cambia la fecha', caja.obtener(e1.id).modificado, modificado)
+    equal('guardar sin cambiar nada no deja versión', (caja.guardar(caja.obtener(e1.id)), caja.historial(e1.id).length), 1)
+    equal('ni cambia la fecha', caja.obtener(e1.id).modificado, editado.modificado)
     const restaurado = caja.restaurarVersion(e1.id, caja.historial(e1.id)[0].id)
     equal('restaurar devuelve lo de antes', restaurado.titulo, 'Banco Santander')
     equal('y guarda lo que había', caja.historial(e1.id).length, 2)
-    check('sin perder el favorito', restaurado.favorito)
     for (let i = 0; i < 25; i++) caja.guardar({ ...caja.obtener(e1.id), notas: `v${i}` })
     equal('se quedan veinte versiones', caja.historial(e1.id).length, 20)
     equal('las últimas', caja.historial(e1.id)[0].detalle.notas, 'v23')
@@ -648,16 +657,18 @@ async function main(): Promise<void> {
     const personal = caja.bovedas()[0].id
     const g = caja.guardar(login(personal, 'Google', 'ana@gmail.com', 'Pw-google-1', 'https://accounts.google.com'))
     caja.guardar(login(personal, 'Amazon', 'ana@gmail.com', 'Pw-amazon-1', 'https://www.amazon.es'))
-    const conCodigo = caja.guardar({
-      ...login(personal, 'GitHub', 'ana-dev', 'Pw-gh-1', 'https://github.com'),
-      favorito: true
-    })
+    const conCodigo = caja.guardar(login(personal, 'GitHub', 'ana-dev', 'Pw-gh-1', 'https://github.com'))
     const secc = conCodigo.secciones.map((s, i) => (i ? s : { ...s, campos: [...s.campos, { id: 'otp', etiqueta: 'Código', tipo: 'totp' as const, valor: 'JBSWY3DPEHPK3PXP' }] }))
     caja.guardar({ ...conCodigo, secciones: secc })
+    // GitHub es lo que más se usa; Amazon, nada.
+    for (let i = 0; i < 3; i++) caja.anotarUso(conCodigo.id)
+    for (let i = 0; i < 8; i++) caja.guardar(login(personal, `Relleno ${i}`, 'x', `Pw-relleno-${i}`, `https://relleno${i}.es`))
+    for (let i = 0; i < 8; i++) caja.anotarUso(caja.listar().find((e) => e.titulo === `Relleno ${i}`)!.id)
 
     let estado: 'abierta' | 'bloqueada' = 'abierta'
     const copiado: string[] = []
     const abiertos: string[] = []
+    let cambios = 0
     const piezas: Piezas = {
       caja: () => caja,
       estado: () => estado,
@@ -667,11 +678,14 @@ async function main(): Promise<void> {
         caja.desbloquear(pw, clave.secreto)
         estado = 'abierta'
       },
+      helloListo: () => true,
+      desbloquearHello: async () => undefined,
       copiar: async (t) => {
         copiado.push(t)
         return { segundos: 90 }
       },
-      abrirElemento: (id) => abiertos.push(id)
+      abrirElemento: (id) => abiertos.push(id),
+      alCambiar: () => cambios++
     }
 
     const est = await atender({ id: 1, tipo: 'estado' }, piezas)
@@ -681,8 +695,9 @@ async function main(): Promise<void> {
     const lista = enMail.datos as Array<{ titulo: string; coincide: boolean; usuario: string; tieneTotp: boolean }>
     equal('en mail.google.com sale Google primero', lista[0]?.titulo, 'Google')
     check('marcado como de esta web', lista[0]?.coincide === true)
-    check('y detrás los favoritos, marcados como de otra web', lista.some((e) => e.titulo === 'GitHub' && !e.coincide && e.tieneTotp))
-    check('Amazon no sale sin buscarlo', !lista.some((e) => e.titulo === 'Amazon'))
+    check('y detrás lo más usado, marcado como de otra web', lista[1]?.titulo === 'GitHub' && !lista[1].coincide && lista[1].tieneTotp)
+    equal('lo de la web y ocho más', lista.length, 9)
+    check('Amazon, sin usar, no sale sin buscarlo', !lista.some((e) => e.titulo === 'Amazon'))
     check('la lista no lleva contraseñas', !JSON.stringify(lista).includes('Pw-'))
     const buscado = await atender({ id: 3, tipo: 'buscar', url: 'https://mail.google.com', consulta: 'amaz' }, piezas)
     equal('buscando, sale lo de otras webs', (buscado.datos as Array<{ titulo: string }>)[0]?.titulo, 'Amazon')
@@ -707,6 +722,7 @@ async function main(): Promise<void> {
     equal('guardada con el origen de la web', caja.obtener(id).webs[0], 'https://www.ejemplo.es')
     const sinPw = await atender({ id: 10, tipo: 'guardar', url: 'https://x.es', titulo: '', usuario: 'a', contrasena: '' }, piezas)
     check('sin contraseña no se guarda nada', !sinPw.ok)
+    equal('cada guardado avisa a la ventana, y el fallido no', cambios, 2)
 
     caja.bloquear()
     estado = 'bloqueada'
