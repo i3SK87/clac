@@ -321,15 +321,6 @@
 
 .anadir-archivo { align-self: flex-start; }
 
-.detalle-etiquetas { gap: 6px; }
-
-.boton-pill {
-  border: none;
-  cursor: pointer;
-}
-
-.boton-pill:hover { background: var(--accent-soft); color: var(--accent); }
-
 .detalle-pie { margin-top: 4px; }
 
 .vista-previa {
@@ -695,27 +686,6 @@
 .editor .detalle-seccion > .row { margin: 4px 14px 8px 18px; width: auto; }
 
 .btn.activo { background: var(--accent-soft); color: var(--accent); }
-
-.pill-quitar {
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  margin-right: -4px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-
-.pill-quitar:hover { background: var(--border-strong); }
-
-.editor-etiqueta {
-  width: 180px;
-  padding: 4px 9px;
-  font-size: 13px;
-}
 
 /* ---------- Barra lateral: lo propio ---------- */
 

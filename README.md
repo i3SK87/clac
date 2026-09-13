@@ -37,9 +37,9 @@ te la robara.
 - **22 tipos de elemento**: inicios de sesión, contraseñas, notas, tarjetas,
   identidades, DNI/NIE, pasaportes, carnés, cuentas bancarias (con IBAN), redes
   wifi, claves SSH, licencias, servidores… Cada uno con sus campos, y se pueden
-  añadir más y abrir secciones propias.
-- **Varias cajas fuertes** (Personal, Trabajo…), **etiquetas**, **archivo** y
-  **papelera** (lo borrado se va solo a los 30 días).
+  añadir más. Sin secciones, etiquetas ni notas: lo más sencilla posible.
+- **Varias cajas fuertes** (Personal, Trabajo…), **archivo** y **papelera** (lo
+  borrado se va solo a los 30 días).
 - **Clic derecho**, como en BONK, en la lista, en cada campo y en las cajas fuertes.
 - **Windows Hello**: tras bloquearse, se vuelve a entrar con el PIN de Windows, la
   huella o la cara. La contraseña maestra, al abrir CLAC y cada catorce días.

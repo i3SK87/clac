@@ -191,12 +191,12 @@ const html = `<!doctype html>
     <li><div><strong>La primera vez</strong><span>La contraseña maestra, la clave secreta y el kit de emergencia.</span></div></li>
     <li><div><strong>Traerte tus contraseñas de Opera</strong><span>Exportar del navegador e importar en CLAC.</span></div></li>
     <li><div><strong>La pantalla principal</strong><span>La barra lateral, la lista, la ficha y el clic derecho.</span></div></li>
-    <li><div><strong>Crear y editar</strong><span>Tipos de elemento, campos, generador, webs, etiquetas y archivos.</span></div></li>
+    <li><div><strong>Crear y editar</strong><span>Tipos de elemento, campos, generador, webs y archivos.</span></div></li>
     <li><div><strong>El generador</strong><span>Contraseñas aleatorias, memorables y PIN.</span></div></li>
     <li><div><strong>El acceso rápido</strong><span>Ctrl + Mayús + Espacio desde cualquier programa.</span></div></li>
     <li><div><strong>La extensión para Opera Air</strong><span>Instalarla y rellenar contraseñas en las webs.</span></div></li>
     <li><div><strong>Watchtower</strong><span>El repaso de tu caja: débiles, repetidas, filtradas, caducadas.</span></div></li>
-    <li><div><strong>Ordenar la caja</strong><span>Cajas fuertes, etiquetas, archivo y papelera.</span></div></li>
+    <li><div><strong>Ordenar la caja</strong><span>Cajas fuertes, archivo y papelera.</span></div></li>
     <li><div><strong>La seguridad del día a día</strong><span>Bloqueo, Windows Hello y portapapeles.</span></div></li>
     <li><div><strong>Copias y cambiar de ordenador</strong><span>Copias automáticas, restaurar y exportar.</span></div></li>
     <li><div><strong>Atajos de teclado</strong><span>Todos, en una tabla.</span></div></li>
@@ -300,7 +300,7 @@ const html = `<!doctype html>
   <ul>
     <li><strong>Todo</strong>, <strong>Watchtower</strong> (con el número de avisos) y el <strong>Generador</strong>.</li>
     <li><strong>Categorías</strong>: solo salen las que tienen algo (inicios de sesión, tarjetas, DNI…).</li>
-    <li><strong>Cajas fuertes</strong> y <strong>Etiquetas</strong>, para ordenar (capítulo 11).</li>
+    <li><strong>Cajas fuertes</strong>, para ordenar (capítulo 11).</li>
     <li>Abajo, <strong>Archivo</strong>, <strong>Papelera</strong>, <strong>Ajustes</strong> y <strong>Bloquear</strong>.</li>
   </ul>
   <h2>Copiar</h2>
@@ -311,7 +311,7 @@ const html = `<!doctype html>
   ${figura('t13-menu', 'Clic derecho en «Google» sin salir de «Banco Ejemplo». A la derecha, el atajo de cada cosa.')}
   <p>En la ficha, el clic derecho sobre un campo tiene lo mismo que sus botones: <strong>copiar</strong>, <strong>mostrar</strong> y, en las contraseñas, <strong>ver en grande</strong>. Y sobre una caja fuerte de la barra lateral, <strong>editarla</strong>, <strong>crear otra</strong> o <strong>eliminarla</strong>.</p>
   <h2>Buscar</h2>
-  <p>El buscador de arriba (<kbd>Ctrl</kbd><span class="mas">+</span><kbd>F</kbd>) busca en títulos, usuarios, webs y etiquetas, sin importar tildes ni mayúsculas. Con las flechas <kbd>↑</kbd> <kbd>↓</kbd> te mueves por la lista.</p>
+  <p>El buscador de arriba (<kbd>Ctrl</kbd><span class="mas">+</span><kbd>F</kbd>) busca en títulos, usuarios y webs, sin importar tildes ni mayúsculas. Con las flechas <kbd>↑</kbd> <kbd>↓</kbd> te mueves por la lista.</p>
 </section>
 
 <!-- 6 -->
@@ -326,10 +326,8 @@ const html = `<!doctype html>
   <ul>
     <li><strong>Cambiar el nombre de un campo</strong>: pulsa en su rótulo y escribe.</li>
     <li><strong>Añadir un campo</strong> de cualquier tipo: texto, contraseña, código de un solo uso, correo, web, teléfono, fecha…</li>
-    <li><strong>Añadir una sección</strong> con título propio, por ejemplo «Preguntas de seguridad».</li>
     <li>Junto a cada contraseña, la <strong>varita</strong> abre el generador; <strong>Usar esta</strong> la pone en el campo.</li>
     <li><strong>Webs</strong>: las del inicio de sesión. Son las que usa la extensión para saber qué va en cada web.</li>
-    <li><strong>Etiquetas</strong>: escribe y pulsa <kbd>Intro</kbd>.</li>
   </ul>
   <p>Guarda con <strong>Guardar</strong> o <kbd>Ctrl</kbd><span class="mas">+</span><kbd>S</kbd>. Para editar uno que ya existe: <strong>Editar</strong> o <kbd>Ctrl</kbd><span class="mas">+</span><kbd>E</kbd>.</p>
   <h2>Códigos de un solo uso</h2>
@@ -449,11 +447,9 @@ const html = `<!doctype html>
 <section class="capitulo">
   <div class="cabeza"><div class="num">11</div>
   <h1>Ordenar la caja</h1>
-  <p class="entradilla">Tres formas, que se pueden combinar.</p></div>
+  <p class="entradilla">Dos formas, que se pueden combinar.</p></div>
   <h2>Cajas fuertes</h2>
   <p>Separan del todo: por ejemplo «Personal» y «Trabajo». Se crean con el <strong>+</strong> junto a «Cajas fuertes» en la barra lateral; el lápiz que aparece al pasar por encima de una, o su clic derecho, permite cambiarle el nombre, el icono y el color, o eliminarla si está vacía. Para pasar un elemento a otra: menú <strong>⋯</strong> de la ficha ▸ <strong>Mover a otra caja fuerte…</strong>.</p>
-  <h2>Etiquetas</h2>
-  <p>Libres, las que quieras, y un elemento puede llevar varias: «banco», «streaming», «familia»… Salen en la barra lateral.</p>
   <h2>Archivo y papelera</h2>
   <ul>
     <li><strong>Archivar</strong> (<kbd>Supr</kbd>) quita un elemento de las listas, del acceso rápido y de la extensión, pero lo guarda en «Archivo». Útil para cuentas que ya no usas pero no quieres perder.</li>

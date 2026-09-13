@@ -16,7 +16,6 @@ export type Vista =
   | { tipo: 'todos' }
   | { tipo: 'categoria'; id: CategoriaId }
   | { tipo: 'boveda'; id: string }
-  | { tipo: 'etiqueta'; nombre: string }
   | { tipo: 'archivo' }
   | { tipo: 'papelera' }
   | { tipo: 'watchtower' }

@@ -30,11 +30,11 @@ function el(titulo, categoria, bovedaId, secciones, extra = {}) {
 }
 
 const elementos = [
-  el('Google', 'login', 'b1', [campo('usuario', 'Usuario', 'texto', 'ana.garcia.ejemplo@gmail.com'), campo('contrasena', 'Contraseña', 'oculto', 'x7#Qm2vL!pR9&tZ4wKb8'), campo(undefined, 'Código de un solo uso', 'totp', 'JBSWY3DPEHPK3PXP')], { webs: ['https://accounts.google.com'], favorito: true, usos: 40, etiquetas: ['correo'] }),
-  el('Banco Ejemplo', 'login', 'b1', [campo('usuario', 'Usuario', 'texto', '12345678Z'), campo('contrasena', 'Contraseña', 'oculto', 'Sol-Tiza-Barco-Lento-Pino')], { webs: ['https://www.bancoejemplo.es'], favorito: true, usos: 12, notas: 'Tarjeta de coordenadas en el cajón de la mesa.' }),
+  el('Google', 'login', 'b1', [campo('usuario', 'Usuario', 'texto', 'ana.garcia.ejemplo@gmail.com'), campo('contrasena', 'Contraseña', 'oculto', 'x7#Qm2vL!pR9&tZ4wKb8'), campo(undefined, 'Código de un solo uso', 'totp', 'JBSWY3DPEHPK3PXP')], { webs: ['https://accounts.google.com'], usos: 40 }),
+  el('Banco Ejemplo', 'login', 'b1', [campo('usuario', 'Usuario', 'texto', '12345678Z'), campo('contrasena', 'Contraseña', 'oculto', 'Sol-Tiza-Barco-Lento-Pino')], { webs: ['https://www.bancoejemplo.es'], usos: 12 }),
   el('Netflix', 'login', 'b1', [campo('usuario', 'Usuario', 'texto', 'ana.garcia.ejemplo@gmail.com'), campo('contrasena', 'Contraseña', 'oculto', 'hola1234')], { webs: ['https://www.netflix.com'] }),
   el('Amazon', 'login', 'b1', [campo('usuario', 'Usuario', 'texto', 'ana.garcia.ejemplo@gmail.com'), campo('contrasena', 'Contraseña', 'oculto', 'hola1234')], { webs: ['https://www.amazon.es'] }),
-  el('GitHub', 'login', 'b2', [campo('usuario', 'Usuario', 'texto', 'anagarcia-dev'), campo('contrasena', 'Contraseña', 'oculto', 'Gh!8vN2#kd7Q')], { webs: ['https://github.com'], etiquetas: ['desarrollo'] }),
+  el('GitHub', 'login', 'b2', [campo('usuario', 'Usuario', 'texto', 'anagarcia-dev'), campo('contrasena', 'Contraseña', 'oculto', 'Gh!8vN2#kd7Q')], { webs: ['https://github.com'] }),
   el('Visa Oro', 'tarjeta', 'b1', [campo('titular', 'Titular', 'texto', 'ANA GARCIA PEREZ'), campo('numero', 'Número', 'oculto', '4000 1234 5678 9010'), campo('caducidad', 'Caducidad', 'mesAnio', '2026-10'), campo('cvv', 'Código de seguridad', 'oculto', '123')], { subtitulo: '•••• 9010' }),
   el('DNI', 'dni', 'b1', [campo('numero', 'Número', 'texto', '12345678Z'), campo('nombre', 'Nombre completo', 'texto', 'Ana García Pérez'), campo('caducidad', 'Caducidad', 'fecha', '2031-03-05')], { subtitulo: 'Ana García Pérez' }),
   el('Wifi de casa', 'wifi', 'b1', [campo('red', 'Nombre de la red', 'texto', 'MiFibra-7A2C'), campo('contrasena', 'Contraseña de la red', 'oculto', 'Tortuga-Farola-Queso')], { subtitulo: 'MiFibra-7A2C' }),

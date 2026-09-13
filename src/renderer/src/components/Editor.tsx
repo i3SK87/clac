@@ -1,10 +1,15 @@
 /**
  * La ficha de un elemento, en modo edición. Sirve para crear y para editar.
  *
- * Los campos de la plantilla vienen puestos, pero todo se puede cambiar: el
- * rótulo de cada campo, quitar los que sobran, añadir otros de cualquier tipo y
- * abrir secciones con título propio. Junto a cada contraseña, el generador; en
- * las claves SSH, un botón para generar una nueva.
+ * Los campos de la plantilla vienen puestos, y se puede cambiar el rótulo de
+ * cada uno, quitar los que sobran y añadir otros. Junto a cada contraseña, el
+ * generador; en las claves SSH, un botón para generar una nueva.
+ *
+ * Lo más sencilla posible, que lo pidió así («no la voy a usar como power
+ * user»): sin secciones nuevas, sin etiquetas y sin notas. Lo que ya las tenga
+ * —de importar de otro gestor— las conserva: una sección que ya existe se sigue
+ * editando y quitando, y las notas se ven y se editan si hay algo escrito. En
+ * las notas seguras, la nota es el contenido y está siempre.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Eye, EyeOff, KeyRound, Plus, Trash2, WandSparkles, X } from 'lucide-react'
@@ -75,7 +80,7 @@ export function Editor({
   alCancelar: () => void
 }): ReactNode {
   const { toast } = useAvisos()
-  const { bovedas, elementos, run } = useStore()
+  const { bovedas, run } = useStore()
   const inicial = useMemo<ElementoEntrada>(
     () =>
       elemento
@@ -105,17 +110,14 @@ export function Editor({
   const [b, setB] = useState<ElementoEntrada>(inicial)
   const [guardando, setGuardando] = useState(false)
   const [descartar, setDescartar] = useState(false)
-  const [etiquetaNueva, setEtiquetaNueva] = useState('')
   const titulo = useRef<HTMLInputElement>(null)
   const sucio = JSON.stringify(b) !== JSON.stringify(inicial)
   const cat = categoria(b.categoria)
 
   useEffect(() => titulo.current?.focus(), [])
 
-  const todasLasEtiquetas = useMemo(
-    () => [...new Set(elementos.flatMap((e) => e.etiquetas))].filter((t) => !b.etiquetas.includes(t)).sort((x, y) => x.localeCompare(y, 'es')),
-    [elementos, b.etiquetas]
-  )
+  // Las notas, solo donde son el contenido o donde ya había algo escrito.
+  const conNotas = b.categoria === 'nota' || inicial.notas.trim() !== ''
 
   const cambiarCampo = (sid: string, cid: string, cambios: Partial<Campo>): void =>
     setB((x) => ({
@@ -271,13 +273,6 @@ export function Editor({
           </section>
         ))}
 
-        <button
-          className="btn small contorno anadir-archivo"
-          onClick={() => setB({ ...b, secciones: [...b.secciones, { id: nuevoId(), titulo: '', campos: [{ id: nuevoId(), etiqueta: 'Texto', tipo: 'texto', valor: '' }] }] })}
-        >
-          <Plus size={14} /> Añadir una sección
-        </button>
-
         {(cat.webs || b.webs.length > 0) && (
           <section className="card detalle-seccion">
             <div className="detalle-seccion-titulo">Webs</div>
@@ -307,52 +302,19 @@ export function Editor({
           </section>
         )}
 
-        <section className="card detalle-seccion">
-          <div className="detalle-seccion-titulo">Notas</div>
-          <textarea
-            className="textarea"
-            value={b.notas}
-            rows={b.categoria === 'nota' ? 12 : 4}
-            placeholder={b.categoria === 'nota' ? 'Escribe aquí la nota' : 'Lo que quieras apuntar'}
-            aria-label="Notas"
-            onChange={(e) => setB({ ...b, notas: e.target.value })}
-          />
-        </section>
-
-        <section className="card detalle-seccion">
-          <div className="detalle-seccion-titulo">Etiquetas</div>
-          <div className="row wrap">
-            {b.etiquetas.map((t) => (
-              <span key={t} className="pill">
-                {t}
-                <button className="pill-quitar" aria-label={`Quitar ${t}`} onClick={() => setB({ ...b, etiquetas: b.etiquetas.filter((x) => x !== t) })}>
-                  <X size={11} />
-                </button>
-              </span>
-            ))}
-            <input
-              className="input editor-etiqueta"
-              list="etiquetas-existentes"
-              value={etiquetaNueva}
-              placeholder="Añadir etiqueta"
-              aria-label="Añadir etiqueta"
-              onChange={(e) => setEtiquetaNueva(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.key === 'Enter' || e.key === ',') && etiquetaNueva.trim()) {
-                  e.preventDefault()
-                  const t = etiquetaNueva.trim()
-                  if (!b.etiquetas.includes(t)) setB({ ...b, etiquetas: [...b.etiquetas, t] })
-                  setEtiquetaNueva('')
-                }
-              }}
+        {conNotas && (
+          <section className="card detalle-seccion">
+            <div className="detalle-seccion-titulo">{b.categoria === 'nota' ? 'Nota' : 'Notas'}</div>
+            <textarea
+              className="textarea"
+              value={b.notas}
+              rows={b.categoria === 'nota' ? 12 : 4}
+              placeholder={b.categoria === 'nota' ? 'Escribe aquí la nota' : 'Lo que quieras apuntar'}
+              aria-label="Notas"
+              onChange={(e) => setB({ ...b, notas: e.target.value })}
             />
-            <datalist id="etiquetas-existentes">
-              {todasLasEtiquetas.map((t) => (
-                <option key={t} value={t} />
-              ))}
-            </datalist>
-          </div>
-        </section>
+          </section>
+        )}
 
         {!elemento && <p className="small subtle">Los archivos se pueden adjuntar en cuanto lo guardes.</p>}
       </div>

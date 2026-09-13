@@ -9,8 +9,6 @@ export function deLaVista(elementos: ElementoLista[], vista: Vista): ElementoLis
       return elementos.filter((e) => e.estado === 'activo' && e.categoria === vista.id)
     case 'boveda':
       return elementos.filter((e) => e.estado === 'activo' && e.bovedaId === vista.id)
-    case 'etiqueta':
-      return elementos.filter((e) => e.estado === 'activo' && e.etiquetas.includes(vista.nombre))
     case 'archivo':
       return elementos.filter((e) => e.estado === 'archivado')
     case 'papelera':
@@ -44,8 +42,6 @@ export function tituloDeVista(vista: Vista, bovedas: Boveda[]): string {
       return categoria(vista.id).plural
     case 'boveda':
       return bovedas.find((b) => b.id === vista.id)?.nombre ?? 'Caja fuerte'
-    case 'etiqueta':
-      return vista.nombre
     case 'archivo':
       return 'Archivo'
     case 'papelera':

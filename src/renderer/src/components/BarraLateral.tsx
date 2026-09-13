@@ -1,12 +1,13 @@
 /**
  * La barra lateral de la casa, con lo de una caja fuerte: todo, Watchtower y
- * el generador arriba; las categorías, cajas fuertes y etiquetas que de verdad
- * tienen algo, en medio; el archivo y la papelera, abajo.
+ * el generador arriba; las categorías que de verdad tienen algo y las cajas
+ * fuertes, en medio; el archivo y la papelera, abajo. Hubo etiquetas, y se
+ * quitaron para dejarla más sencilla.
  *
  * Las cajas fuertes tienen clic derecho: editarla o eliminarla.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Archive, Layers, Lock, Pencil, Plus, Settings, ShieldAlert, Tag, Trash2, WandSparkles } from 'lucide-react'
+import { Archive, Layers, Lock, Pencil, Plus, Settings, ShieldAlert, Trash2, WandSparkles } from 'lucide-react'
 import { Confirm, useAvisos } from 'casa/ui'
 import { MenuContextual, useMenu } from 'casa/menu'
 import { CATEGORIAS } from '@shared/categorias'
@@ -57,18 +58,15 @@ export function BarraLateral(): ReactNode {
   const cuenta = useMemo(() => {
     const porCategoria = new Map<string, number>()
     const porBoveda = new Map<string, number>()
-    const porEtiqueta = new Map<string, number>()
     for (const e of activos) {
       porCategoria.set(e.categoria, (porCategoria.get(e.categoria) ?? 0) + 1)
       porBoveda.set(e.bovedaId, (porBoveda.get(e.bovedaId) ?? 0) + 1)
-      for (const t of e.etiquetas) porEtiqueta.set(t, (porEtiqueta.get(t) ?? 0) + 1)
     }
-    return { porCategoria, porBoveda, porEtiqueta }
+    return { porCategoria, porBoveda }
   }, [activos])
 
   const archivados = elementos.filter((e) => e.estado === 'archivado').length
   const eliminados = elementos.filter((e) => e.estado === 'eliminado').length
-  const etiquetas = [...cuenta.porEtiqueta.keys()].sort((a, b) => a.localeCompare(b, 'es'))
 
   // Una función y no un componente: definido aquí dentro, React lo tomaría por
   // uno nuevo en cada pintada y desmontaría los botones, foco incluido.
@@ -140,16 +138,6 @@ export function BarraLateral(): ReactNode {
               <Pencil size={13} />
             </button>
           )
-        })
-      )}
-
-      {etiquetas.length > 0 && <div className="sidebar-section">Etiquetas</div>}
-      {etiquetas.map((t) =>
-        item(`tag-${t}`, {
-          destino: { tipo: 'etiqueta', nombre: t },
-          icono: <Tag size={16} />,
-          etiqueta: t,
-          numero: cuenta.porEtiqueta.get(t)
         })
       )}
 

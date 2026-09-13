@@ -152,7 +152,7 @@ function CampoLectura({
 
 export function Detalle({ id, alEditar }: { id: string; alEditar: () => void }): ReactNode {
   const { toast, fail } = useAvisos()
-  const { revision, bovedas, irA, run, seleccionar } = useStore()
+  const { revision, bovedas, run, seleccionar } = useStore()
   const [e, setE] = useState<Elemento | null>(null)
   const [revelarTodo, setRevelarTodo] = useState(false)
   const [moviendo, setMoviendo] = useState(false)
@@ -345,16 +345,6 @@ export function Detalle({ id, alEditar }: { id: string; alEditar: () => void }):
           >
             <Paperclip size={14} /> Adjuntar archivo
           </button>
-        )}
-
-        {e.etiquetas.length > 0 && (
-          <div className="row wrap detalle-etiquetas">
-            {e.etiquetas.map((t) => (
-              <button key={t} className="pill boton-pill" onClick={() => irA({ tipo: 'etiqueta', nombre: t })}>
-                {t}
-              </button>
-            ))}
-          </div>
         )}
 
         <p className="detalle-pie small subtle">
