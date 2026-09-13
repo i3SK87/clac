@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>CLAC</title>
+    <style>
+      /* El fondo mientras todavía no hay tema puesto: el mismo con el que el
+         proceso principal pinta la ventana nativa, como en BONK. */
+      html { background: #f2f3f7; }
+      @media (prefers-color-scheme: dark) { html { background: #14161a; } }
+      html:not([data-theme]) body { background: transparent; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

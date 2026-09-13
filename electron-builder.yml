@@ -1,0 +1,35 @@
+appId: com.clac.desktop
+productName: CLAC
+directories:
+  buildResources: resources
+  output: release
+files:
+  - out/**
+  # Las pruebas se compilan en out/test y no pintan nada en el instalador.
+  - '!out/test/**'
+  - package.json
+  # El icono lo necesitan la ventana y el de la bandeja, en tiempo de ejecución.
+  - resources/icon.ico
+  - resources/icon.png
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    # La vía de repuesto, como en BONK: si el filtro de Windows no deja pasar
+    # el instalador, la carpeta suelta se descomprime y se ejecuta igual.
+    - target: zip
+      arch: [x64]
+  artifactName: ${productName}-${version}-portable.${ext}
+nsis:
+  artifactName: ${productName}-${version}-Setup.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: CLAC
+  installerLanguages: [es_ES]
+  language: 1034
+  # Desinstalar no se lleva la caja fuerte: está en %APPDATA%\CLAC y ahí se
+  # queda. Perderla por quitar el programa sería perder todas las contraseñas.
+  deleteAppDataOnUninstall: false

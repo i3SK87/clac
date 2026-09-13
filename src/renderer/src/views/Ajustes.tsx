@@ -1,0 +1,502 @@
+/**
+ * Ajustes, en tarjetas como los de BONK: seguridad, acceso rápido, aspecto,
+ * contraseña maestra y kit de emergencia, y los datos (copias, importar y
+ * exportar).
+ */
+import { useEffect, useState, type ReactNode } from 'react'
+import { Download, Eye, EyeOff, FileDown, FileUp, FolderOpen, HardDriveDownload, KeyRound, Lock, Printer, TriangleAlert } from 'lucide-react'
+import { Checkbox, Field, Modal, Segmented, SelectorPaleta, mensajeDeError, useAvisos } from 'casa/ui'
+import { CATEGORIAS } from '@shared/categorias'
+import { fortaleza } from '@shared/fortaleza'
+import { haceCuanto } from '@shared/fechas'
+import type { InfoDatos, Tema, VistaImportacion } from '@shared/tipos'
+import { api, useStore } from '../lib/store'
+import { PedirContrasena } from '../components/PedirContrasena'
+import { Medidor } from '../components/piezas'
+
+const MINUTOS = [1, 2, 5, 10, 15, 30, 60, 0]
+const SEGUNDOS = [30, 60, 90, 120, 300, 0]
+
+export function VistaAjustes(): ReactNode {
+  const { toast } = useAvisos()
+  const { ajustes, cambiarAjustes, run, revision } = useStore()
+  const [info, setInfo] = useState<InfoDatos | null>(null)
+  const [version, setVersion] = useState('')
+  const [modal, setModal] = useState<null | 'contrasena' | 'kit' | 'clave' | 'exportar' | 'importar'>(null)
+
+  useEffect(() => {
+    void api.datos.info().then(setInfo)
+    void api.app.version().then(setVersion)
+  }, [revision])
+
+  return (
+    <div className="content ajustes">
+      <section className="card">
+        <div className="card-header">
+          <h2>Seguridad</h2>
+        </div>
+        <div className="card-body col" style={{ gap: 14 }}>
+          <div className="ajuste-fila">
+            <div>
+              <strong>Bloquear tras un rato sin usar el ordenador</strong>
+              <p className="small muted">Cuenta el teclado y el ratón de todo el equipo, no solo de esta ventana.</p>
+            </div>
+            <select
+              className="select ajuste-select"
+              value={ajustes.bloqueoMinutos}
+              onChange={(e) => void cambiarAjustes({ bloqueoMinutos: Number(e.target.value) })}
+              aria-label="Minutos hasta bloquear"
+            >
+              {MINUTOS.map((m) => (
+                <option key={m} value={m}>
+                  {m === 0 ? 'Nunca' : m === 1 ? '1 minuto' : m === 60 ? '1 hora' : `${m} minutos`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Checkbox
+            checked={ajustes.bloquearAlBloquearWindows}
+            onChange={(v) => void cambiarAjustes({ bloquearAlBloquearWindows: v })}
+            label="Bloquear al bloquear Windows (Win+L)"
+          />
+          <Checkbox
+            checked={ajustes.bloquearAlSuspender}
+            onChange={(v) => void cambiarAjustes({ bloquearAlSuspender: v })}
+            label="Bloquear al suspender el equipo"
+          />
+          <div className="divider" />
+          <div className="ajuste-fila">
+            <div>
+              <strong>Vaciar el portapapeles</strong>
+              <p className="small muted">
+                Lo copiado de la caja se borra al rato, si sigue ahí. Tampoco queda en el historial de Win+V.
+              </p>
+            </div>
+            <select
+              className="select ajuste-select"
+              value={ajustes.portapapelesSegundos}
+              onChange={(e) => void cambiarAjustes({ portapapelesSegundos: Number(e.target.value) })}
+              aria-label="Segundos hasta vaciar el portapapeles"
+            >
+              {SEGUNDOS.map((s) => (
+                <option key={s} value={s}>
+                  {s === 0 ? 'Nunca' : s < 60 ? `A los ${s} segundos` : s === 60 ? 'Al minuto' : `A los ${s} segundos`}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-header">
+          <h2>Acceso rápido</h2>
+        </div>
+        <div className="card-body col" style={{ gap: 12 }}>
+          <Checkbox
+            checked={ajustes.accesoRapido}
+            onChange={(v) => void cambiarAjustes({ accesoRapido: v })}
+            label={
+              <>
+                Abrir el buscador con <kbd>Ctrl</kbd> <kbd>Mayús</kbd> <kbd>Espacio</kbd> desde cualquier programa
+              </>
+            }
+            hint="Busca, pulsa Intro y la contraseña queda copiada. Ctrl+C copia el usuario y Ctrl+Alt+C el código de un solo uso."
+          />
+          <Checkbox
+            checked={ajustes.cerrarABandeja}
+            onChange={(v) => void cambiarAjustes({ cerrarABandeja: v })}
+            label="Al cerrar la ventana, seguir en la bandeja"
+            hint="El acceso rápido y el bloqueo automático necesitan que CLAC siga en marcha."
+          />
+          <Checkbox
+            checked={ajustes.arrancarConWindows}
+            onChange={(v) => void cambiarAjustes({ arrancarConWindows: v })}
+            label="Arrancar con Windows"
+            hint="Se abre en la bandeja, bloqueada y sin ventana."
+          />
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-header">
+          <h2>Aspecto</h2>
+        </div>
+        <div className="card-body col" style={{ gap: 14 }}>
+          <Field label="Tema">
+            <Segmented<Tema>
+              value={ajustes.theme}
+              onChange={(theme) => void cambiarAjustes({ theme })}
+              options={[
+                { value: 'system', label: 'Como Windows' },
+                { value: 'light', label: 'Claro' },
+                { value: 'dark', label: 'Oscuro' }
+              ]}
+            />
+          </Field>
+          <Field label="Paleta" hint="Las mismas nueve que BONK: son de la casa.">
+            <SelectorPaleta value={ajustes.palette} onChange={(palette) => void cambiarAjustes({ palette })} />
+          </Field>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-header">
+          <h2>Contraseña maestra y clave secreta</h2>
+        </div>
+        <div className="card-body col" style={{ gap: 12 }}>
+          <p className="small muted">
+            La caja se abre con las dos a la vez. La contraseña la sabes tú; la clave secreta está guardada en este equipo, cifrada con tu cuenta de
+            Windows, y en el kit de emergencia. Si pierdes las dos, nadie puede abrir la caja: tampoco CLAC.
+          </p>
+          <div className="row wrap">
+            <button className="btn" onClick={() => setModal('contrasena')}>
+              <KeyRound size={15} /> Cambiar la contraseña maestra
+            </button>
+            <button className="btn" onClick={() => setModal('kit')}>
+              <Printer size={15} /> Guardar el kit de emergencia
+            </button>
+            <button className="btn ghost" onClick={() => setModal('clave')}>
+              <Eye size={15} /> Ver la clave secreta
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-header">
+          <h2>Datos</h2>
+        </div>
+        <div className="card-body col" style={{ gap: 12 }}>
+          {info && (
+            <p className="small muted">
+              {info.elementos} {info.elementos === 1 ? 'elemento' : 'elementos'} en {info.bovedas} {info.bovedas === 1 ? 'caja fuerte' : 'cajas fuertes'}.
+              Se guardan en <span className="mono">{info.carpeta}</span>. Al cerrar se hace una copia al día, y se guardan las diez últimas
+              {info.copias ? ` (ahora hay ${info.copias})` : ''}. {info.ultimaCopia ? `La última, ${haceCuanto(info.ultimaCopia)}.` : ''}
+            </p>
+          )}
+          <div className="row wrap">
+            <button className="btn" onClick={() => void run(() => api.datos.copiaAhora()).then((r) => r && toast('Copia hecha'))}>
+              <HardDriveDownload size={15} /> Hacer una copia ahora
+            </button>
+            <button className="btn" onClick={() => void run(() => api.datos.guardarCopiaCifrada()).then((r) => r && toast('Copia cifrada guardada'))}>
+              <Download size={15} /> Guardar una copia cifrada…
+            </button>
+            <button className="btn ghost" onClick={() => void run(() => api.datos.abrirCarpeta())}>
+              <FolderOpen size={15} /> Abrir la carpeta
+            </button>
+          </div>
+          <div className="divider" />
+          <div className="row wrap">
+            <button className="btn" onClick={() => setModal('importar')}>
+              <FileUp size={15} /> Importar contraseñas…
+            </button>
+            <button className="btn" onClick={() => setModal('exportar')}>
+              <FileDown size={15} /> Exportar sin cifrar…
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <p className="small subtle ajustes-pie">
+        CLAC {version} · de la misma casa que BONK · todo se queda en este ordenador
+      </p>
+
+      {modal === 'contrasena' && <CambiarContrasena alCerrar={() => setModal(null)} />}
+      {modal === 'kit' && (
+        <PedirContrasena
+          titulo="Guardar el kit de emergencia"
+          explicacion="El kit lleva tu clave secreta. Imprímelo y guárdalo donde guardarías una llave."
+          boton="Guardar el PDF"
+          alCerrar={() => setModal(null)}
+          alConfirmar={async (pw) => {
+            const ruta = await api.sesion.kit(pw)
+            setModal(null)
+            if (ruta) toast('Kit de emergencia guardado')
+          }}
+        />
+      )}
+      {modal === 'clave' && <VerClave alCerrar={() => setModal(null)} />}
+      {modal === 'exportar' && <Exportar alCerrar={() => setModal(null)} />}
+      {modal === 'importar' && <Importar alCerrar={() => setModal(null)} />}
+    </div>
+  )
+}
+
+/* ---------- Cambiar la contraseña maestra ---------- */
+
+function CambiarContrasena({ alCerrar }: { alCerrar: () => void }): ReactNode {
+  const { toast } = useAvisos()
+  const [actual, setActual] = useState('')
+  const [nueva, setNueva] = useState('')
+  const [repetida, setRepetida] = useState('')
+  const [ver, setVer] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [ocupado, setOcupado] = useState(false)
+  const f = fortaleza(nueva)
+  const vale = actual && nueva.trim().length >= 10 && f.nivel >= 2 && nueva === repetida
+
+  const cambiar = async (): Promise<void> => {
+    if (!vale || ocupado) return
+    setOcupado(true)
+    setError(null)
+    try {
+      await api.sesion.cambiarContrasena(actual, nueva)
+      toast('Contraseña maestra cambiada. La clave secreta y el kit siguen valiendo.')
+      alCerrar()
+    } catch (e) {
+      setError(mensajeDeError(e))
+      setOcupado(false)
+    }
+  }
+
+  return (
+    <Modal
+      title="Cambiar la contraseña maestra"
+      onClose={alCerrar}
+      footer={
+        <>
+          <button className="btn ghost" onClick={() => setVer(!ver)}>
+            {ver ? <EyeOff size={15} /> : <Eye size={15} />} {ver ? 'Ocultar' : 'Mostrar'}
+          </button>
+          <span className="spacer" />
+          <button className="btn" onClick={alCerrar}>
+            Cancelar
+          </button>
+          <button className="btn primary" disabled={!vale || ocupado} onClick={() => void cambiar()}>
+            {ocupado ? 'Cambiando…' : 'Cambiar'}
+          </button>
+        </>
+      }
+    >
+      <Field label="Contraseña actual" error={error} htmlFor="cc-actual">
+        <input id="cc-actual" className="input" type={ver ? 'text' : 'password'} value={actual} autoFocus onChange={(e) => setActual(e.target.value)} />
+      </Field>
+      <Field label="Contraseña nueva" htmlFor="cc-nueva" hint={nueva ? undefined : 'Al menos 10 caracteres'}>
+        <input id="cc-nueva" className="input" type={ver ? 'text' : 'password'} value={nueva} onChange={(e) => setNueva(e.target.value)} />
+      </Field>
+      {nueva && <Medidor fortaleza={f} />}
+      <Field label="Repítela" error={repetida && repetida !== nueva ? 'No coincide.' : null} htmlFor="cc-repetida">
+        <input
+          id="cc-repetida"
+          className="input"
+          type={ver ? 'text' : 'password'}
+          value={repetida}
+          onChange={(e) => setRepetida(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void cambiar()}
+        />
+      </Field>
+    </Modal>
+  )
+}
+
+/* ---------- Ver la clave secreta ---------- */
+
+function VerClave({ alCerrar }: { alCerrar: () => void }): ReactNode {
+  const [clave, setClave] = useState<string | null>(null)
+  if (!clave) {
+    return (
+      <PedirContrasena
+        titulo="Ver la clave secreta"
+        explicacion="Con ella y tu contraseña se abre la caja en cualquier ordenador. No la enseñes."
+        boton="Ver"
+        alCerrar={alCerrar}
+        alConfirmar={async (pw) => setClave(await api.sesion.claveSecreta(pw))}
+      />
+    )
+  }
+  return (
+    <Modal title="Tu clave secreta" onClose={alCerrar}>
+      <div className="clave-grande mono">{clave}</div>
+      <p className="small muted">
+        Sin 0, 1, I, O ni U: lo que parezca uno de esos es un 2, una Z, una J, una Q o una V. Los guiones no cuentan.
+      </p>
+    </Modal>
+  )
+}
+
+/* ---------- Exportar ---------- */
+
+function Exportar({ alCerrar }: { alCerrar: () => void }): ReactNode {
+  const { toast } = useAvisos()
+  const [formato, setFormato] = useState<'json' | 'csv' | null>(null)
+  if (formato) {
+    return (
+      <PedirContrasena
+        titulo="Exportar sin cifrar"
+        peligro
+        explicacion="El archivo tendrá todas tus contraseñas a la vista. Guárdalo solo el tiempo que te haga falta y bórralo después."
+        boton="Exportar"
+        alCerrar={alCerrar}
+        alConfirmar={async (pw) => {
+          const ruta = await api.datos.exportar(formato, pw)
+          alCerrar()
+          if (ruta) toast('Exportado. Recuerda borrarlo cuando termines.')
+        }}
+      />
+    )
+  }
+  return (
+    <Modal title="Exportar sin cifrar" onClose={alCerrar}>
+      <div className="aviso-fuerte">
+        <TriangleAlert size={18} />
+        <span>
+          Esto saca tus contraseñas de la caja fuerte, sin cifrar. Para una copia de seguridad, usa mejor «Guardar una copia cifrada».
+        </span>
+      </div>
+      <button className="opcion-grande" onClick={() => setFormato('json')}>
+        <strong>Todo, en JSON de CLAC</strong>
+        <span className="small muted">Cada campo, sección, etiqueta y nota. Se vuelve a importar aquí sin perder nada.</span>
+      </button>
+      <button className="opcion-grande" onClick={() => setFormato('csv')}>
+        <strong>Inicios de sesión, en CSV</strong>
+        <span className="small muted">Con el formato de Bitwarden, que entienden casi todos los gestores. Lo demás va como notas.</span>
+      </button>
+    </Modal>
+  )
+}
+
+/* ---------- Importar ---------- */
+
+function Importar({ alCerrar }: { alCerrar: () => void }): ReactNode {
+  const { toast } = useAvisos()
+  const { bovedas } = useStore()
+  const [vista, setVista] = useState<VistaImportacion | null>(null)
+  const [destino, setDestino] = useState(bovedas[0]?.id ?? '')
+  const [error, setError] = useState<string | null>(null)
+  const [ocupado, setOcupado] = useState(false)
+
+  const elegir = async (): Promise<void> => {
+    setError(null)
+    try {
+      const v = await api.importar.elegir()
+      if (v) setVista(v)
+    } catch (e) {
+      setError(mensajeDeError(e))
+    }
+  }
+
+  const importar = async (): Promise<void> => {
+    setOcupado(true)
+    try {
+      const r = await api.importar.confirmar(destino)
+      toast(
+        r.repetidos
+          ? `Importados ${r.nuevos}. ${r.repetidos} ya estaban y no se han duplicado.`
+          : `Importados ${r.nuevos} ${r.nuevos === 1 ? 'elemento' : 'elementos'}.`
+      )
+      alCerrar()
+    } catch (e) {
+      setError(mensajeDeError(e))
+      setOcupado(false)
+    }
+  }
+
+  const cerrar = (): void => {
+    void api.importar.cancelar()
+    alCerrar()
+  }
+
+  const nuevos = vista ? vista.total - vista.repetidos : 0
+
+  return (
+    <Modal
+      title="Importar contraseñas"
+      onClose={cerrar}
+      wide
+      footer={
+        <>
+          <span className="spacer" />
+          <button className="btn" onClick={cerrar}>
+            Cancelar
+          </button>
+          {vista && (
+            <button className="btn primary" disabled={ocupado || nuevos === 0} onClick={() => void importar()}>
+              {ocupado ? 'Importando…' : `Importar ${nuevos}`}
+            </button>
+          )}
+        </>
+      }
+    >
+      {!vista && (
+        <>
+          <p className="small muted">
+            Exporta tus contraseñas desde donde estén y elige aquí el archivo. Se reconoce solo de dónde viene.
+          </p>
+          <ul className="lista-origenes small">
+            <li>
+              <strong>Opera, Chrome, Edge o Brave</strong>: Configuración ▸ Contraseñas ▸ Exportar contraseñas (CSV).
+            </li>
+            <li>
+              <strong>Firefox</strong>: Contraseñas ▸ menú ⋯ ▸ Exportar contraseñas (CSV).
+            </li>
+            <li>
+              <strong>1Password</strong>: Archivo ▸ Exportar, en formato .1pux (trae también los documentos) o CSV.
+            </li>
+            <li>
+              <strong>Bitwarden</strong>: Herramientas ▸ Exportar caja fuerte, en JSON sin cifrar o CSV.
+            </li>
+            <li>
+              <strong>KeePassXC y LastPass</strong>: su exportación en CSV.
+            </li>
+          </ul>
+          {error && <p className="field-error">{error}</p>}
+          <button className="btn primary" onClick={() => void elegir()}>
+            <FileUp size={15} /> Elegir el archivo…
+          </button>
+        </>
+      )}
+      {vista && (
+        <>
+          <p>
+            <strong>{vista.archivo}</strong> <span className="muted">· {vista.nombreFormato}</span>
+          </p>
+          <div className="row wrap">
+            {Object.entries(vista.porCategoria).map(([cat, n]) => (
+              <span key={cat} className="pill">
+                {CATEGORIAS.find((c) => c.id === cat)?.plural}: {n}
+              </span>
+            ))}
+          </div>
+          {vista.repetidos > 0 && (
+            <p className="small muted">
+              {vista.repetidos} {vista.repetidos === 1 ? 'ya está' : 'ya están'} en la caja fuerte y no se {vista.repetidos === 1 ? 'duplicará' : 'duplicarán'}.
+            </p>
+          )}
+          {vista.avisos.map((a) => (
+            <div key={a} className="aviso-fuerte suave">
+              <TriangleAlert size={16} />
+              <span className="small">{a}</span>
+            </div>
+          ))}
+          <div className="muestra-importacion">
+            {vista.muestra.map((m, i) => (
+              <div key={i} className="small">
+                <strong>{m.titulo}</strong> <span className="muted">{m.subtitulo}</span>
+              </div>
+            ))}
+            {vista.total > vista.muestra.length && <div className="small subtle">y {vista.total - vista.muestra.length} más…</div>}
+          </div>
+          {bovedas.length > 1 && (
+            <Field label="Meterlos en" htmlFor="imp-destino">
+              <select id="imp-destino" className="select" value={destino} onChange={(e) => setDestino(e.target.value)}>
+                {bovedas.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.nombre}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+          <div className="aviso-fuerte suave">
+            <Lock size={16} />
+            <span className="small">
+              Cuando termines, borra el archivo exportado: tiene las contraseñas sin cifrar. Si venían del navegador, puedes borrarlas también de allí.
+            </span>
+          </div>
+          {error && <p className="field-error">{error}</p>}
+        </>
+      )}
+    </Modal>
+  )
+}
