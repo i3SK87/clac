@@ -146,7 +146,10 @@ namespace Clac {
         try { s.WaitForConnection(); } catch (Exception) { s.Dispose(); continue; }
         uint pid = 0;
         GetNamedPipeClientProcessId(s.SafePipeHandle.DangerousGetHandle(), out pid);
-        string motivo = pid == 0 ? "no se sabe quién llama" : Examinar(pid, exe, navegadores);
+        // Si examinar falla, se rechaza y se sigue: un error aquí no puede tumbar la puerta.
+        string motivo;
+        try { motivo = pid == 0 ? "no se sabe quién llama" : Examinar(pid, exe, navegadores); }
+        catch (Exception e) { motivo = "no se ha podido examinar: " + e.Message; }
         if (motivo != null) {
           Decir("R " + pid + " " + B64(motivo));
           try { s.Disconnect(); } catch (Exception) { }
@@ -211,6 +214,7 @@ namespace Clac {
 
 const GUION = `
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 Add-Type -ReferencedAssemblies System.Core -TypeDefinition @'
 ${CSHARP}
 '@
@@ -276,7 +280,12 @@ export function arrancarPortero(o: OpcionesPortero): Portero {
       }
     }
   })
-  p.stderr.on('data', (t: Buffer) => o.alFallar?.(t.toString('utf8').trim().slice(0, 400)))
+  p.stderr.on('data', (t: Buffer) => {
+    const texto = t.toString('utf8').trim()
+    // PowerShell escribe sus avisos de progreso en CLIXML por aquí: no son fallos.
+    if (!texto || (texto.startsWith('#< CLIXML') && !texto.includes('S="Error"'))) return
+    o.alFallar?.(texto.slice(0, 400))
+  })
   p.on('exit', (codigo) => {
     if (!parado) o.alFallar?.(`el portero se ha cerrado (${codigo})`)
   })
