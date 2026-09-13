@@ -1,7 +1,7 @@
 /**
  * Un ayudante de PowerShell para lo que Electron no sabe hacer en Windows.
  *
- * Dos cosas. La primera, **copiar sin que quede en el historial del
+ * Tres cosas. La primera, **copiar sin que quede en el historial del
  * portapapeles**. Windows guarda lo copiado en Win+V —y en este equipo está
  * encendido—, así que una contraseña copiada seguiría ahí aunque luego se vacíe
  * el portapapeles. Windows respeta tres marcas para no guardar algo
@@ -22,6 +22,13 @@
  * detrás) se declara en C# sin tipos de WinRT y devuelve el objeto tal cual, y
  * PowerShell lo espera con su `AsTask`. Se compila la primera vez que hace
  * falta: el portapapeles no espera por él.
+ *
+ * Y la tercera, **ponerse delante de verdad**. Windows no deja que un programa
+ * de fondo se lleve el foco (hace parpadear su botón en la barra de tareas),
+ * que es justo lo que pasaba al pulsar «Abrir en CLAC» en la extensión: quien
+ * está delante es Opera. El truco conocido es enganchar un momento este hilo a
+ * la cola de entrada de la ventana de delante (`AttachThreadInput`): para
+ * Windows, entonces, el cambio de foco lo pide la misma cola que lo tiene.
  */
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { registrar, registrarFallo } from './registro'
@@ -33,6 +40,43 @@ Add-Type -AssemblyName System.Windows.Forms
 [Console]::InputEncoding = [Text.Encoding]::UTF8
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 function Cero { New-Object System.IO.MemoryStream(,[byte[]](0,0,0,0)) }
+$script:ventanas = $false
+function Ventanas {
+  if ($script:ventanas) { return }
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace Clac {
+  public static class Ventanas {
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr p);
+    [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+    [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool unir);
+    [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr h);
+    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+    [DllImport("user32.dll")] static extern bool IsIconic(IntPtr h);
+    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int como);
+    public static bool Traer(long numero) {
+      IntPtr h = new IntPtr(numero);
+      if (IsIconic(h)) ShowWindow(h, 9);
+      IntPtr delante = GetForegroundWindow();
+      if (delante == h) return true;
+      uint suyo = delante == IntPtr.Zero ? 0 : GetWindowThreadProcessId(delante, IntPtr.Zero);
+      uint mio = GetCurrentThreadId();
+      bool unidos = suyo != 0 && suyo != mio && AttachThreadInput(mio, suyo, true);
+      try {
+        BringWindowToTop(h);
+        SetForegroundWindow(h);
+      } finally {
+        if (unidos) AttachThreadInput(mio, suyo, false);
+      }
+      return GetForegroundWindow() == h;
+    }
+  }
+}
+'@
+  $script:ventanas = $true
+}
 $script:hello = $null
 function Hello {
   if ($script:hello) { return $script:hello }
@@ -91,6 +135,10 @@ while ($true) {
       $texto = $null
     }
     $datos = $null
+    if ($orden.op -eq 'traer') {
+      Ventanas
+      $datos = [string][Clac.Ventanas]::Traer([long]$orden.ventana)
+    }
     if ($orden.op -eq 'helloEstado') {
       $h = Hello
       $t = $h.esperarEstado.Invoke($null, @([Windows.Security.Credentials.UI.UserConsentVerifier]::CheckAvailabilityAsync()))
@@ -193,6 +241,16 @@ export async function copiarSinHistorial(texto: string): Promise<boolean> {
   // El primer uso incluye arrancar PowerShell, que en frío tarda un par de segundos.
   const r = await pedir({ op: 'copiar', texto: Buffer.from(texto, 'utf8').toString('base64') }, 6000)
   return r.ok
+}
+
+/**
+ * Pone delante la ventana y le da el foco, aunque lo pida otro programa. `true`
+ * si ha quedado delante; `false` si Windows no ha querido o el ayudante no
+ * estaba.
+ */
+export async function traerVentana(ventana: bigint): Promise<boolean> {
+  const r = await pedir({ op: 'traer', ventana: ventana.toString() }, 5000)
+  return r.ok && r.datos === 'True'
 }
 
 /**

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CLAC",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Rellena contraseñas desde CLAC, el gestor de contraseñas de este ordenador. Sin nube: solo habla con CLAC.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy5oVonWJMvUHrh/hQSJ1JnB65mWY0jS4HXvyKnUazfvF44m93gYm5AMp3xto0swbBt+8nPMSaNeTIU01ItrNHhnUQT/TnoeVQWzaXNDzwJGvZb5SHpVpNBeITP0WwtAK7YnjIlM5OU1zWrX6zE2wKGJMdqWwm+bRi7yaclZXLW8KdNyhaT8/5AnvJmGaBMTXc1hn/yAwrgRoIIACNy2TUx0g2uTgk6Vt2A73xFO9mWWtpsStYcv5d1hmYc2e/dtKEQimd/6/D+JRCVf1XOtVgESGEBTyBWwHufu0+fAXi/ZA3bmc7NYpjxoiSE2xRCFIMkiGVelCduagb9rtPqRUdwIDAQAB",
   "action": {

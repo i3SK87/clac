@@ -1,7 +1,7 @@
 {
   "name": "clac",
   "productName": "CLAC",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Gestor de contraseñas local para Windows",
   "author": "okli2",
   "private": true,

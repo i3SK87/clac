@@ -17,7 +17,7 @@ import { registrarIpc } from './ipc'
 import { vigilarBloqueo } from './bloqueo'
 import { alternarAcceso, destruirAcceso } from './acceso'
 import { aplicarArranque, arrancoOculta } from './autostart'
-import { pararAyudante, precalentar } from './ayudante'
+import { pararAyudante, precalentar, traerVentana } from './ayudante'
 import { copiar, vaciarSiEsNuestro } from './portapapeles'
 import { aplicarNavegador, pararNavegador } from './navegador/conexion'
 import type { Piezas } from './navegador/protocolo'
@@ -99,12 +99,36 @@ function crearVentana(): void {
 function mostrarVentana(): void {
   if (!ventana || ventana.isDestroyed()) {
     crearVentana()
-    ventana?.once('ready-to-show', () => ventana?.show())
+    ventana?.once('ready-to-show', () => {
+      ventana?.show()
+      if (ventana) alFrente(ventana)
+    })
     return
   }
   if (ventana.isMinimized()) ventana.restore()
   ventana.show()
-  ventana.focus()
+  alFrente(ventana)
+}
+
+/**
+ * Delante de todo, aunque lo pida otro programa: «Abrir en CLAC» desde la
+ * extensión, con Opera delante.
+ *
+ * Windows no deja a un programa de fondo quitarle el foco a otro: lo que hace
+ * es parpadear el botón en la barra de tareas. Dos capas: ponerla un instante
+ * «siempre encima» y quitarlo —cambiar el orden sí está permitido, y se queda
+ * por delante de todas—, y pedirle al ayudante que le dé también el foco del
+ * teclado, que eso ya no lo concede Windows así como así.
+ */
+function alFrente(w: BrowserWindow): void {
+  w.setAlwaysOnTop(true)
+  w.moveTop()
+  w.focus()
+  w.setAlwaysOnTop(false)
+  if (w.isFocused()) return
+  void traerVentana(w.getNativeWindowHandle().readBigUInt64LE(0)).then((ok) => {
+    if (!ok) registrar('ventana', 'Windows no ha dejado ponerla delante con el foco')
+  })
 }
 
 function salir(): void {
