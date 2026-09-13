@@ -10,6 +10,7 @@ import type {
   EstadoElemento,
   EstadoSesion,
   InfoDatos,
+  InfoNavegador,
   InformeWatchtower,
   ResultadoCopia,
   VersionHistorial,
@@ -104,6 +105,10 @@ const api = {
   },
   web: {
     abrir: (texto: string) => llamar<void>('web:abrir', texto)
+  },
+  navegador: {
+    info: () => llamar<InfoNavegador>('navegador:info'),
+    abrirCarpeta: () => llamar<string>('navegador:abrirCarpeta')
   },
   app: {
     version: () => llamar<string>('app:version')

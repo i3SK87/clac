@@ -5,6 +5,7 @@ import {
   ajustes,
   bloquear,
   cerrarServicio,
+  desbloquear,
   estadoSesion,
   iniciarServicio,
   laCaja
@@ -14,7 +15,9 @@ import { vigilarBloqueo } from './bloqueo'
 import { alternarAcceso, destruirAcceso } from './acceso'
 import { aplicarArranque, arrancoOculta } from './autostart'
 import { pararAyudante, precalentar } from './ayudante'
-import { vaciarSiEsNuestro } from './portapapeles'
+import { copiar, vaciarSiEsNuestro } from './portapapeles'
+import { aplicarNavegador, pararNavegador } from './navegador/conexion'
+import type { Piezas } from './navegador/protocolo'
 import { registrar, registrarFallo } from './registro'
 import type { Ajustes } from '@shared/tipos'
 
@@ -177,10 +180,33 @@ function registrarAtajos(a: Ajustes): void {
   globalShortcut.register('CommandOrControl+Shift+L', () => bloquear('atajo'))
 }
 
+/** Lo que la extensión del navegador puede pedirle a CLAC. */
+const piezasNavegador: Piezas = {
+  caja: laCaja,
+  estado: estadoSesion,
+  ajustes,
+  version: app.getVersion(),
+  desbloquear: (contrasena) => desbloquear(contrasena),
+  copiar: (texto) => copiar(texto, ajustes().portapapelesSegundos),
+  abrirElemento: (id) => {
+    mostrarVentana()
+    ventana?.webContents.send('abrir:elemento', id)
+  }
+}
+
+/** Lo último que se aplicó del navegador: no se reescribe el registro en cada ajuste. */
+let navegadorAplicado: boolean | null = null
+
 function alCambiarAjustes(a: Ajustes): void {
   nativeTheme.themeSource = a.theme
   registrarAtajos(a)
   aplicarArranque(a.arrancarConWindows)
+  if (a.navegador !== navegadorAplicado) {
+    // Apagado desde siempre, no hay nada que borrar del registro al arrancar.
+    const antes = navegadorAplicado
+    navegadorAplicado = a.navegador
+    if (a.navegador || antes !== null) void aplicarNavegador(a.navegador, piezasNavegador)
+  }
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -224,6 +250,7 @@ if (!app.requestSingleInstanceLock()) {
     saliendo = true
     globalShortcut.unregisterAll()
     vaciarSiEsNuestro()
+    pararNavegador()
     destruirAcceso()
     pararAyudante()
     cerrarServicio()

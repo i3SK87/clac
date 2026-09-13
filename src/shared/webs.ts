@@ -31,6 +31,32 @@ export function dominioDe(texto: string): string {
   return new URL(url).hostname.replace(/^www\./, '').toLowerCase()
 }
 
+/**
+ * Los sufijos de dos piezas más comunes: en «bbc.co.uk» el dominio es «bbc.co.uk»
+ * y no «co.uk». La lista completa (la Public Suffix List) son diez mil líneas;
+ * para las webs que se usan en España basta con estas.
+ */
+const SUFIJOS_DOBLES = new Set([
+  'co.uk', 'org.uk', 'ac.uk', 'gov.uk', 'com.es', 'nom.es', 'org.es', 'gob.es', 'edu.es',
+  'com.ar', 'com.mx', 'com.br', 'com.co', 'com.pe', 'com.ve', 'com.uy', 'com.au', 'co.nz',
+  'co.jp', 'co.kr', 'co.in', 'co.za', 'com.tr', 'com.cn', 'com.pt', 'com.pl'
+])
+
+/**
+ * El dominio que decide si una web es «la misma»: «accounts.google.com» y
+ * «mail.google.com» son google.com. Es lo que usa la extensión para ofrecer los
+ * elementos de la web en la que estás, y para avisar si vas a rellenar en otra.
+ */
+export function dominioBase(texto: string): string {
+  const host = dominioDe(texto)
+  if (!host) return ''
+  if (host === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(host)) return host
+  const partes = host.split('.')
+  const ultimasDos = partes.slice(-2).join('.')
+  if (SUFIJOS_DOBLES.has(ultimasDos) && partes.length >= 3) return partes.slice(-3).join('.')
+  return ultimasDos
+}
+
 /** Si la web va sin cifrar, que es lo que avisa Watchtower. */
 export function esSinCifrar(texto: string): boolean {
   const limpio = texto.trim().toLowerCase()

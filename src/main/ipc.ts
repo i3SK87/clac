@@ -27,6 +27,7 @@ import { copiar } from './portapapeles'
 import { comprobarFiltraciones } from './hibp'
 import { construirKitHtml } from './kit'
 import { ocultarAcceso } from './acceso'
+import { carpetaExtension, infoNavegador } from './navegador/conexion'
 import { exportarCsv, exportarJson } from './boveda/exportar'
 import { leerZip, type EntradaZip } from './boveda/zip'
 import { generarClaveSsh } from './boveda/ssh'
@@ -315,6 +316,11 @@ export function registrarIpc(entorno: Entorno): void {
     c.guardarDatosCuenta({ filtraciones, filtradasRevisadasEn: new Date().toISOString() })
     return informe()
   })
+
+  /* ---------- Navegador ---------- */
+
+  handle('navegador:info', () => infoNavegador(ajustes().navegador))
+  handle('navegador:abrirCarpeta', () => shell.openPath(carpetaExtension()))
 
   /* ---------- Varios ---------- */
 

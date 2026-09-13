@@ -1,22 +1,23 @@
 {
   "name": "clac",
   "productName": "CLAC",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Gestor de contraseñas local para Windows",
   "author": "okli2",
   "private": true,
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "build": "npm run typecheck && electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.extension.json",
+    "build": "npm run typecheck && electron-vite build && npm run extension",
     "test": "esbuild test/smoke.ts --bundle --platform=node --format=esm --outfile=out/test/smoke.mjs --external:node:* --alias:@shared=./src/shared && node out/test/smoke.mjs",
     "icono": "node ../casa/marca/marca.mjs clac resources",
     "dist": "npm run build && electron-builder --win --config electron-builder.yml --publish never",
-    "pack": "npm run build && electron-builder --win --dir --config electron-builder.yml"
+    "pack": "npm run build && electron-builder --win --dir --config electron-builder.yml",
+    "extension": "node scripts/extension.mjs"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@types/chrome": "^0.2.9",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",

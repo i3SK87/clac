@@ -12,5 +12,6 @@ export const AJUSTES_INICIALES: Ajustes = {
   arrancarConWindows: false,
   cerrarABandeja: true,
   ordenLista: 'titulo',
-  ultimaCopia: null
+  ultimaCopia: null,
+  navegador: false
 }

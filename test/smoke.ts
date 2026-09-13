@@ -8,13 +8,16 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { deflateRawSync, crc32 } from 'node:zlib'
+import { createServer } from 'node:net'
+import { spawn } from 'node:child_process'
+import { atender, type Piezas } from '../src/main/navegador/protocolo'
 
 import { enteroAleatorio, barajar } from '../src/shared/aleatorio'
 import { ALFABETO, formatearClave, leerClave, nuevaClaveSecreta, nuevoIdCuenta } from '../src/shared/claveSecreta'
 import { OPCIONES_POR_DEFECTO, SIMBOLOS, generar, llana, trocear } from '../src/shared/generador'
 import { fortaleza } from '../src/shared/fortaleza'
 import { base32ABytes, bytesABase32, codigoTotp, formatearCodigo, hotp, leerTotp, segundosRestantes } from '../src/shared/totp'
-import { colorDe, dominioDe, esSinCifrar, inicialDe, normalizarWeb } from '../src/shared/webs'
+import { colorDe, dominioBase, dominioDe, esSinCifrar, inicialDe, normalizarWeb } from '../src/shared/webs'
 import { finDeValidez, mostrarFecha } from '../src/shared/fechas'
 import { escribirCsv, leerCsv } from '../src/shared/csv'
 import { desde1pux, leerExportacion } from '../src/shared/importar'
@@ -627,6 +630,148 @@ async function main(): Promise<void> {
     check('el kit lleva la clave', html.includes('ABCDEF') && html.includes('C1'))
     check('y escapa lo que se cuela', html.includes('&lt;ana&gt;') && !html.includes('<ana>'))
     check('con la fecha en castellano', html.includes('13 de septiembre de 2026'))
+  }
+
+  /* ================================================================ */
+  section('Navegador')
+  {
+    equal('el dominio base de un subdominio', dominioBase('https://accounts.google.com/signin'), 'google.com')
+    equal('con sufijo de dos piezas', dominioBase('https://www.bbc.co.uk'), 'bbc.co.uk')
+    equal('y los .com.es', dominioBase('tienda.ejemplo.com.es'), 'ejemplo.com.es')
+    equal('una IP se queda entera', dominioBase('http://192.168.1.1/admin'), '192.168.1.1')
+    check('una web falsa no es la del banco', dominioBase('https://santander.es.acceso-seguro.com') !== dominioBase('https://www.santander.es'))
+
+    const dir = carpetaTemporal()
+    const caja = new CajaFuerte(dir, { N: 2 ** 10 })
+    const clave = nuevaClaveSecreta(nuevoIdCuenta())
+    caja.crear('una contraseña bastante larga', clave)
+    const personal = caja.bovedas()[0].id
+    const g = caja.guardar(login(personal, 'Google', 'ana@gmail.com', 'Pw-google-1', 'https://accounts.google.com'))
+    caja.guardar(login(personal, 'Amazon', 'ana@gmail.com', 'Pw-amazon-1', 'https://www.amazon.es'))
+    const conCodigo = caja.guardar({
+      ...login(personal, 'GitHub', 'ana-dev', 'Pw-gh-1', 'https://github.com'),
+      favorito: true
+    })
+    const secc = conCodigo.secciones.map((s, i) => (i ? s : { ...s, campos: [...s.campos, { id: 'otp', etiqueta: 'Código', tipo: 'totp' as const, valor: 'JBSWY3DPEHPK3PXP' }] }))
+    caja.guardar({ ...conCodigo, secciones: secc })
+
+    let estado: 'abierta' | 'bloqueada' = 'abierta'
+    const copiado: string[] = []
+    const abiertos: string[] = []
+    const piezas: Piezas = {
+      caja: () => caja,
+      estado: () => estado,
+      ajustes: () => leerAjustes(caja.db),
+      version: '9.9.9',
+      desbloquear: (pw) => {
+        caja.desbloquear(pw, clave.secreto)
+        estado = 'abierta'
+      },
+      copiar: async (t) => {
+        copiado.push(t)
+        return { segundos: 90 }
+      },
+      abrirElemento: (id) => abiertos.push(id)
+    }
+
+    const est = await atender({ id: 1, tipo: 'estado' }, piezas)
+    check('el estado dice la sesión, el tema y la versión', est.ok && (est.datos as { sesion: string; version: string }).version === '9.9.9')
+
+    const enMail = await atender({ id: 2, tipo: 'buscar', url: 'https://mail.google.com/inbox', consulta: '' }, piezas)
+    const lista = enMail.datos as Array<{ titulo: string; coincide: boolean; usuario: string; tieneTotp: boolean }>
+    equal('en mail.google.com sale Google primero', lista[0]?.titulo, 'Google')
+    check('marcado como de esta web', lista[0]?.coincide === true)
+    check('y detrás los favoritos, marcados como de otra web', lista.some((e) => e.titulo === 'GitHub' && !e.coincide && e.tieneTotp))
+    check('Amazon no sale sin buscarlo', !lista.some((e) => e.titulo === 'Amazon'))
+    check('la lista no lleva contraseñas', !JSON.stringify(lista).includes('Pw-'))
+    const buscado = await atender({ id: 3, tipo: 'buscar', url: 'https://mail.google.com', consulta: 'amaz' }, piezas)
+    equal('buscando, sale lo de otras webs', (buscado.datos as Array<{ titulo: string }>)[0]?.titulo, 'Amazon')
+
+    const cred = await atender({ id: 4, tipo: 'credenciales', elementoId: g.id }, piezas)
+    equal('las credenciales, cuando se piden', (cred.datos as { contrasena: string }).contrasena, 'Pw-google-1')
+    equal('y apuntan el uso', caja.listar().find((e) => e.id === g.id)?.usos, 1)
+    const credGh = await atender({ id: 5, tipo: 'credenciales', elementoId: conCodigo.id }, piezas)
+    check('con el código de un solo uso calculado', /^\d{6}$/.test((credGh.datos as { codigo: string }).codigo))
+
+    await atender({ id: 6, tipo: 'copiar', elementoId: g.id, que: 'usuario' }, piezas)
+    await atender({ id: 7, tipo: 'copiarTexto', texto: 'generada-1' }, piezas)
+    equal('copiar pasa por CLAC', copiado.join(','), 'ana@gmail.com,generada-1')
+
+    const nuevo = await atender({ id: 8, tipo: 'guardar', url: 'https://www.ejemplo.es/registro', titulo: 'Ejemplo', usuario: 'ana', contrasena: 'Nueva-1' }, piezas)
+    equal('guardar una web nueva la crea', (nuevo.datos as { accion: string }).accion, 'creado')
+    const cambio = await atender({ id: 9, tipo: 'guardar', url: 'https://ejemplo.es/cuenta', titulo: 'otra cosa', usuario: 'ana', contrasena: 'Nueva-2' }, piezas)
+    equal('la misma web y usuario, la actualiza', (cambio.datos as { accion: string }).accion, 'actualizado')
+    const id = (cambio.datos as { id: string }).id
+    equal('con la contraseña nueva', contrasenaDe(caja.obtener(id)), 'Nueva-2')
+    equal('y la de antes en el historial', contrasenaDe(caja.historial(id)[0].detalle), 'Nueva-1')
+    equal('guardada con el origen de la web', caja.obtener(id).webs[0], 'https://www.ejemplo.es')
+    const sinPw = await atender({ id: 10, tipo: 'guardar', url: 'https://x.es', titulo: '', usuario: 'a', contrasena: '' }, piezas)
+    check('sin contraseña no se guarda nada', !sinPw.ok)
+
+    caja.bloquear()
+    estado = 'bloqueada'
+    const bloqueada = await atender({ id: 11, tipo: 'buscar', url: 'https://google.com', consulta: '' }, piezas)
+    check('bloqueada, no da nada', !bloqueada.ok && /bloqueada/.test(bloqueada.error ?? ''))
+    const mala = await atender({ id: 12, tipo: 'desbloquear', contrasena: 'no es esta' }, piezas)
+    check('desbloquear con otra contraseña falla', !mala.ok && /no es correcta/.test(mala.error ?? ''))
+    const buena = await atender({ id: 13, tipo: 'desbloquear', contrasena: 'una contraseña bastante larga' }, piezas)
+    check('y con la buena abre', buena.ok && caja.abierta())
+    await atender({ id: 14, tipo: 'abrirElemento', elementoId: g.id }, piezas)
+    equal('abrir en CLAC pasa el elemento', abiertos[0], g.id)
+    caja.cerrar()
+
+    // El puente, de verdad: un Node que habla mensajería nativa por un lado y
+    // un canal con nombre por el otro.
+    const usuarioFalso = `prueba-${process.pid}`
+    const tubo = `\\\\.\\pipe\\clac-navegador-${usuarioFalso}`
+    const recibido: string[] = []
+    const enchufes: Array<{ destroy: () => void }> = []
+    const servidor = createServer((s) => {
+      enchufes.push(s)
+      s.setEncoding('utf8')
+      s.on('data', (t: string) => {
+        for (const linea of t.split('\n').filter(Boolean)) {
+          recibido.push(linea)
+          const p = JSON.parse(linea) as { id: number; tipo: string }
+          s.write(JSON.stringify({ id: p.id, ok: true, datos: { eco: p.tipo, ñ: 'año' } }) + '\n')
+        }
+      })
+    })
+    await new Promise<void>((r) => servidor.listen(tubo, r))
+    const puente = spawn(process.execPath, [join(process.cwd(), 'src', 'main', 'navegador', 'anfitrion.cjs')], {
+      env: { ...process.env, USERNAME: usuarioFalso }
+    })
+    const mandar = (o: object): void => {
+      const cuerpo = Buffer.from(JSON.stringify(o), 'utf8')
+      const cab = Buffer.alloc(4)
+      cab.writeUInt32LE(cuerpo.length)
+      puente.stdin.write(Buffer.concat([cab, cuerpo]))
+    }
+    const respuestas: Array<{ id: number; datos?: { eco: string; ñ: string } }> = []
+    let bruto = Buffer.alloc(0)
+    puente.stdout.on('data', (d: Buffer) => {
+      bruto = Buffer.concat([bruto, d])
+      while (bruto.length >= 4 && bruto.length >= 4 + bruto.readUInt32LE(0)) {
+        const n = bruto.readUInt32LE(0)
+        respuestas.push(JSON.parse(bruto.subarray(4, 4 + n).toString('utf8')))
+        bruto = bruto.subarray(4 + n)
+      }
+    })
+    mandar({ id: 1, tipo: 'estado' })
+    mandar({ id: 2, tipo: 'buscar', url: 'https://ejemplo.es', consulta: 'ñandú' })
+    for (let i = 0; i < 50 && respuestas.length < 2; i++) await new Promise((r) => setTimeout(r, 50))
+    equal('el puente pasa los mensajes a CLAC', recibido.length, 2)
+    equal('y trae las respuestas, en orden', respuestas.map((r) => r.id).join(','), '1,2')
+    equal('sin romper las eñes por el camino', respuestas[1]?.datos?.ñ, 'año')
+    check('la búsqueda llega entera', JSON.parse(recibido[1]).consulta === 'ñandú')
+    // Cerrar CLAC es cerrar el canal y cortar lo que tuviera conectado.
+    servidor.close()
+    enchufes.forEach((e) => e.destroy())
+    await new Promise((r) => setTimeout(r, 100))
+    mandar({ id: 3, tipo: 'estado' })
+    for (let i = 0; i < 50 && respuestas.length < 3; i++) await new Promise((r) => setTimeout(r, 50))
+    check('con CLAC cerrada, lo dice', (respuestas[2] as { cerrada?: boolean })?.cerrada === true)
+    puente.stdin.end()
   }
 
   console.log(`\n${passed} bien, ${failed} mal`)

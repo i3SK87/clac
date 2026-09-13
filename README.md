@@ -58,6 +58,31 @@ te la robara.
 - **Importar** desde Opera, Chrome, Edge, Brave, Firefox, 1Password (`.1pux` y
   CSV), Bitwarden, KeePassXC y LastPass. **Exportar** en JSON completo o CSV.
 
+## La extensión para el navegador
+
+Rellena el usuario, la contraseña y el código de un solo uso en Opera Air (y en
+Chrome, Edge o Brave). Pulsas el candado de CLAC en la barra —o `Ctrl + Mayús +
+X`—, te enseña lo guardado de la web en la que estás, y con `Intro` o un clic lo
+escribe en el formulario. Si el elemento es de otra web, **para y avisa antes**:
+es como se descubre una web falsa que imita a la de tu banco.
+
+También guarda lo que acabas de escribir en una página (y si ya tenías esa web
+con ese usuario, le cambia la contraseña y guarda la de antes en el historial), y
+genera contraseñas nuevas para las páginas de alta.
+
+Cómo se instala:
+
+1. En CLAC, **Ajustes ▸ Navegador**: enciende la casilla.
+2. En Opera Air, `opera://extensions`, enciende el **modo desarrollador** y carga
+   descomprimida la carpeta que te indica CLAC (dentro de la instalación, en
+   `resources\extension`).
+
+Por dentro: la extensión solo pide tres permisos —la pestaña en la que la pulsas,
+escribir en ella y hablar con CLAC—; nada de «leer y cambiar todas tus webs». No
+guarda nada: cada vez pregunta a CLAC, por la mensajería nativa de Chromium, a
+través de un puente pequeño que es el propio `CLAC.exe` en modo Node. Solo rellena
+cuando la pulsas, y nunca envía el formulario por ti.
+
 ## Internet
 
 CLAC no se conecta a nada, salvo una cosa y solo cuando pulsas el botón:

@@ -182,6 +182,20 @@ export interface Ajustes {
   cerrarABandeja: boolean
   ordenLista: OrdenLista
   ultimaCopia: string | null
+  /** La extensión del navegador puede hablar con CLAC. */
+  navegador: boolean
+}
+
+/* ---------- Navegador ---------- */
+
+export interface InfoNavegador {
+  activo: boolean
+  /** La carpeta que hay que cargar en opera://extensions. */
+  carpetaExtension: string
+  idExtension: string
+  /** Si el registro de Windows apunta a donde tiene que apuntar. */
+  registrado: boolean
+  ultimaConexion: string | null
 }
 
 /* ---------- Watchtower ---------- */

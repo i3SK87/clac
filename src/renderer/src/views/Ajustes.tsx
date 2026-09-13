@@ -9,7 +9,7 @@ import { Checkbox, Field, Modal, Segmented, SelectorPaleta, mensajeDeError, useA
 import { CATEGORIAS } from '@shared/categorias'
 import { fortaleza } from '@shared/fortaleza'
 import { haceCuanto } from '@shared/fechas'
-import type { InfoDatos, Tema, VistaImportacion } from '@shared/tipos'
+import type { InfoDatos, InfoNavegador, Tema, VistaImportacion } from '@shared/tipos'
 import { api, useStore } from '../lib/store'
 import { PedirContrasena } from '../components/PedirContrasena'
 import { Medidor } from '../components/piezas'
@@ -118,6 +118,8 @@ export function VistaAjustes(): ReactNode {
         </div>
       </section>
 
+      <TarjetaNavegador />
+
       <section className="card">
         <div className="card-header">
           <h2>Aspecto</h2>
@@ -220,6 +222,88 @@ export function VistaAjustes(): ReactNode {
       {modal === 'exportar' && <Exportar alCerrar={() => setModal(null)} />}
       {modal === 'importar' && <Importar alCerrar={() => setModal(null)} />}
     </div>
+  )
+}
+
+/* ---------- Navegador ---------- */
+
+/**
+ * La extensión se carga a mano, en modo desarrollador: Opera no deja instalar
+ * nada que no venga de su tienda si no. Por eso la tarjeta dice los pasos y
+ * deja la carpeta a un clic, y abajo cuenta si la extensión ya ha llamado.
+ */
+function TarjetaNavegador(): ReactNode {
+  const { toast } = useAvisos()
+  const { ajustes, cambiarAjustes, run, revision } = useStore()
+  const [info, setInfo] = useState<InfoNavegador | null>(null)
+
+  useEffect(() => {
+    let vivo = true
+    // El alta en el registro tarda un instante: se pregunta un poco después.
+    const t = window.setTimeout(() => void api.navegador.info().then((i) => vivo && setInfo(i)), 400)
+    return () => {
+      vivo = false
+      window.clearTimeout(t)
+    }
+  }, [ajustes.navegador, revision])
+
+  return (
+    <section className="card">
+      <div className="card-header">
+        <h2>Navegador</h2>
+        {info?.activo && (
+          <span className={`pill ${info.ultimaConexion ? 'ok' : info.registrado ? 'acento' : 'aviso'}`}>
+            {info.ultimaConexion ? 'Conectada' : info.registrado ? 'Esperando a la extensión' : 'Sin registrar'}
+          </span>
+        )}
+      </div>
+      <div className="card-body col" style={{ gap: 12 }}>
+        <Checkbox
+          checked={ajustes.navegador}
+          onChange={(v) => void cambiarAjustes({ navegador: v })}
+          label="Dejar que la extensión de CLAC rellene contraseñas en Opera, Chrome, Edge o Brave"
+          hint="Apunta en el registro de Windows, solo para tu usuario, quién es CLAC para esa extensión y para ninguna otra. Apagarlo lo borra."
+        />
+        {ajustes.navegador && info && (
+          <>
+            <ol className="pasos-extension small">
+              <li>
+                En Opera Air, escribe <span className="mono">opera://extensions</span> en la barra de direcciones.
+              </li>
+              <li>
+                Enciende el <strong>Modo desarrollador</strong>, arriba a la derecha.
+              </li>
+              <li>
+                Pulsa el botón de cargar una extensión descomprimida (el primero de la barra que aparece) y elige esta carpeta:
+                <div className="ruta-extension">
+                  <span className="mono truncate" title={info.carpetaExtension}>
+                    {info.carpetaExtension}
+                  </span>
+                  <button
+                    className="btn small"
+                    onClick={() => void run(() => api.copiar.texto(info.carpetaExtension)).then(() => toast('Ruta copiada'))}
+                  >
+                    Copiar
+                  </button>
+                  <button className="btn small ghost" onClick={() => void run(() => api.navegador.abrirCarpeta())}>
+                    Abrir
+                  </button>
+                </div>
+              </li>
+              <li>
+                Fija el icono del candado en la barra del navegador. Se abre también con <kbd>Ctrl</kbd> <kbd>Mayús</kbd> <kbd>X</kbd>.
+              </li>
+            </ol>
+            <p className="small subtle">
+              {info.ultimaConexion
+                ? `La extensión habló con CLAC por última vez ${haceCuanto(info.ultimaConexion)}.`
+                : 'La extensión todavía no ha hablado con CLAC desde que se abrió.'}{' '}
+              Solo rellena cuando pulsas en ella, y avisa si la web no es la del elemento.
+            </p>
+          </>
+        )}
+      </div>
+    </section>
   )
 }
 

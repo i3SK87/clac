@@ -11,6 +11,11 @@ files:
   # El icono lo necesitan la ventana y el de la bandeja, en tiempo de ejecución.
   - resources/icon.ico
   - resources/icon.png
+extraResources:
+  # La extensión del navegador, lista para cargar en opera://extensions desde
+  # la carpeta de la instalación: al actualizar CLAC, se actualiza con ella.
+  - from: extension/dist
+    to: extension
 win:
   target:
     - target: nsis

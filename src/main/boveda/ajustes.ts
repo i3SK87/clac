@@ -20,7 +20,8 @@ export const AJUSTES_DE_FABRICA: Ajustes = {
   arrancarConWindows: false,
   cerrarABandeja: true,
   ordenLista: 'titulo',
-  ultimaCopia: null
+  ultimaCopia: null,
+  navegador: false
 }
 
 export function leerAjustes(db: DatabaseSync): Ajustes {
@@ -65,6 +66,7 @@ function sanear(a: Ajustes): Ajustes {
     arrancarConWindows: a.arrancarConWindows === true,
     cerrarABandeja: a.cerrarABandeja !== false,
     ordenLista: a.ordenLista === 'modificado' || a.ordenLista === 'usado' ? a.ordenLista : 'titulo',
-    ultimaCopia: typeof a.ultimaCopia === 'string' ? a.ultimaCopia : null
+    ultimaCopia: typeof a.ultimaCopia === 'string' ? a.ultimaCopia : null,
+    navegador: a.navegador === true
   }
 }

@@ -1,0 +1,234 @@
+/* ============================================================
+   La extensión de CLAC
+
+   Encima van `casa/paletas.css` y `casa/base.css`, concatenadas al
+   compilar: los mismos tonos, botones y campos que en la aplicación.
+   Aquí solo lo de esta ventana, que es pequeña: 370 px de ancho.
+   ============================================================ */
+
+html,
+body {
+  height: auto;
+}
+
+body {
+  width: 370px;
+  min-height: 200px;
+  max-height: 580px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.icono {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+
+.ext-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  background: var(--sidebar-bg);
+  color: #fff;
+  font-size: 14px;
+}
+
+.ext-cabecera img { border-radius: 6px; }
+
+.ext-dominio {
+  margin-left: auto;
+  max-width: 190px;
+  color: var(--sidebar-fg);
+  font-size: 12px;
+}
+
+.ext-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.ext-buscador { font-size: 14px; }
+
+.ext-rotulo {
+  padding: 4px 6px 2px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--fg-subtle);
+}
+
+.ext-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 340px;
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+.ext-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.ext-fila.elegida { background: var(--accent-soft); }
+
+.ext-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: none;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.ext-textos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.ext-titulo { font-weight: 600; font-size: 13.5px; }
+.ext-sub { font-size: 12px; color: var(--fg-muted); }
+
+/* Los botones de copiar, solo en la fila elegida: si no, veinte filas son sesenta iconos. */
+.ext-acciones {
+  display: flex;
+  gap: 1px;
+  opacity: 0;
+}
+
+.ext-fila.elegida .ext-acciones { opacity: 1; }
+
+.ext-vacio {
+  padding: 16px 8px;
+  color: var(--fg-muted);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.ext-pie {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  margin: 0 -12px -12px;
+  padding: 6px 8px;
+  background: var(--bg-sunken);
+}
+
+.ext-aviso {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 8px 14px;
+  text-align: center;
+  color: var(--fg-muted);
+}
+
+.ext-aviso h2 { font-size: 15px; color: var(--fg); }
+.ext-aviso p { font-size: 13px; line-height: 1.5; }
+.ext-aviso .input { text-align: center; }
+
+.ancho { width: 100%; }
+.segmented.ancho button { flex: 1; }
+
+.hueco-mensaje:empty { display: none; }
+
+.ext-mensaje {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.ext-mensaje.error { background: var(--negative-soft); color: var(--negative); }
+.ext-mensaje.ok { background: var(--positive-soft); color: var(--positive); }
+.ext-mensaje.aviso { background: var(--warning-soft); color: var(--warning); }
+
+/* El aviso de «esta web no es la del elemento». */
+.ext-confirmar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 8px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  color: var(--fg);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.ext-confirmar .icono { color: var(--warning); margin-top: 1px; }
+
+.ext-confirmar-botones {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ext-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ext-formulario h2,
+.ext-titulo-seccion { font-size: 15px; }
+
+.ext-etiqueta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.ext-puntos {
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: var(--fg);
+  font-weight: 400;
+}
+
+.ext-nota { font-size: 11.5px; color: var(--fg-subtle); }
+
+.ext-botones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ext-botones .ext-nota { margin-right: auto; }
+.ext-botones > .btn.ghost:first-child { margin-right: auto; }
+
+.ext-generada {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.ext-generada .cifra { color: var(--accent); }
+.ext-generada .simbolo { color: var(--series-expense); }

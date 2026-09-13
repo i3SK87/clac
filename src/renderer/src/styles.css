@@ -1260,6 +1260,28 @@
   color: var(--fg-muted);
 }
 
+.pasos-extension {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--fg-muted);
+}
+
+.ruta-extension {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px 6px 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--fg);
+}
+
+.ruta-extension .mono { flex: 1; min-width: 0; font-size: 12px; }
+
 .muestra-importacion {
   display: flex;
   flex-direction: column;
