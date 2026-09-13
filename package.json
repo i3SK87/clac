@@ -14,7 +14,9 @@
     "icono": "node ../casa/marca/marca.mjs clac resources",
     "dist": "npm run build && electron-builder --win --config electron-builder.yml --publish never",
     "pack": "npm run build && electron-builder --win --dir --config electron-builder.yml",
-    "extension": "node scripts/extension.mjs"
+    "extension": "node scripts/extension.mjs",
+    "capturas": "node docs/tutorial/capturar.mjs",
+    "tutorial": "electron docs/tutorial/construir.cjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.2.9",
