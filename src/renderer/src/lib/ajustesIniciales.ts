@@ -15,5 +15,7 @@ export const AJUSTES_INICIALES: Ajustes = {
   ultimaCopia: null,
   navegador: false,
   windowsHello: false,
-  buscarVersiones: true
+  buscarVersiones: true,
+  carpetaCopiaExtra: null,
+  ultimaCopiaExtra: null
 }

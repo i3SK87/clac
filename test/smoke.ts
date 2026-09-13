@@ -4,7 +4,7 @@
  *
  *   npm test
  */
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync as fs_mkdir_raw, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { deflateRawSync, crc32 } from 'node:zlib'
@@ -29,12 +29,14 @@ import type { Detalle, ElementoEntrada, ElementoLista, Seccion } from '../src/sh
 
 import { abrir, derivarClaveDesbloqueo, sellar, ErrorDescifrado, KDF_POR_DEFECTO } from '../src/main/boveda/cripto'
 import { CajaFuerte, ErrorBloqueada, ErrorContrasena } from '../src/main/boveda/boveda'
-import { hacerCopia } from '../src/main/boveda/db'
+import { copiarEnCarpeta, hacerCopia } from '../src/main/boveda/db'
 import { leerZip } from '../src/main/boveda/zip'
 import { exportarCsv, exportarJson } from '../src/main/boveda/exportar'
 import { generarClaveSsh } from '../src/main/boveda/ssh'
 import { guardarAjustes, leerAjustes } from '../src/main/boveda/ajustes'
 import { construirKitHtml } from '../src/main/kit'
+
+const fs_mkdir = (dir: string): void => void fs_mkdir_raw(dir, { recursive: true })
 
 let passed = 0
 let failed = 0
@@ -534,6 +536,22 @@ async function main(): Promise<void> {
     const basura = join(dir, 'basura.db')
     writeFileSync(basura, 'no soy una base de datos')
     throws('un archivo cualquiera no es una caja', () => CajaFuerte.examinar(basura), /no es una caja fuerte/)
+
+    // La copia fuera del ordenador: otra carpeta (OneDrive), con las diez últimas.
+    const fuera = join(carpetaTemporal(), 'OneDrive', 'CLAC')
+    const ajeno = join(fuera, '..', 'mis-fotos.txt')
+    const cosasSuyas = join(fuera, 'notas.txt')
+    fs_mkdir(fuera)
+    writeFileSync(ajeno, 'mío')
+    writeFileSync(cosasSuyas, 'mío también')
+    for (let i = 0; i < 11; i++) writeFileSync(join(fuera, `clac-2020-01-01T00-00-${String(i).padStart(2, '0')}.db`), 'vieja')
+    const enNube = copiarEnCarpeta(caja.db, fuera, 10)
+    const quedan = readdirSync(fuera).filter((x) => /^clac-.*.db$/.test(x))
+    equal('en la otra carpeta se quedan las diez últimas', quedan.length, 10)
+    check('las más viejas se van', !quedan.includes('clac-2020-01-01T00-00-00.db') && !quedan.includes('clac-2020-01-01T00-00-01.db'))
+    check('y lo demás que haya en la carpeta no se toca', readFileSync(cosasSuyas, 'utf8') === 'mío también' && readFileSync(ajeno, 'utf8') === 'mío')
+    equal('la copia de fuera abre con lo suyo', CajaFuerte.examinar(enNube, 'la contraseña nueva de verdad', clave.secreto).abre, true)
+    check('y va cifrada: no lleva nada en claro', !readFileSync(enNube).includes(Buffer.from('Banco')))
 
     // Exportar e importar de vuelta
     const todo = caja.todosConDetalle()

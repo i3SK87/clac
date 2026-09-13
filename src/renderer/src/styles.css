@@ -1222,6 +1222,12 @@
 
 .aviso-fuerte svg { flex: none; margin-top: 1px; }
 
+/* Lo que ha fallado, en rojo. */
+.aviso-fuerte.mal {
+  background: var(--negative-soft);
+  color: var(--negative);
+}
+
 .aviso-fuerte.suave {
   background: var(--bg-sunken);
   color: var(--fg-muted);

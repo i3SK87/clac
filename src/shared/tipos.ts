@@ -188,6 +188,9 @@ export interface Ajustes {
   windowsHello: boolean
   /** Al abrir, mirar en GitHub si hay versión nueva (ver main/actualizaciones.ts). */
   buscarVersiones: boolean
+  /** Otra carpeta donde dejar también cada copia, para tenerla fuera del ordenador (OneDrive). */
+  carpetaCopiaExtra: string | null
+  ultimaCopiaExtra: string | null
 }
 
 /* ---------- Actualizaciones ---------- */
@@ -286,4 +289,6 @@ export interface InfoDatos {
   ultimaCopia: string | null
   elementos: number
   bovedas: number
+  /** Si la última copia en la otra carpeta falló, por qué. */
+  falloCopiaExtra: string | null
 }

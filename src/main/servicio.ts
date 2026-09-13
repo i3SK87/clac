@@ -9,11 +9,11 @@ import { app, BrowserWindow } from 'electron'
 import { existsSync, renameSync, rmSync, copyFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { CajaFuerte, ErrorContrasena } from './boveda/boveda'
-import { NOMBRE_ARCHIVO, hacerCopia } from './boveda/db'
+import { NOMBRE_ARCHIVO, copiarEnCarpeta, hacerCopia } from './boveda/db'
 import { guardarAjustes, leerAjustes } from './boveda/ajustes'
 import { guardarClaveLocal, leerClaveLocal } from './claveLocal'
 import { vaciarSiEsNuestro } from './portapapeles'
-import { registrar } from './registro'
+import { registrar, registrarFallo } from './registro'
 import { pedirHello } from './ayudante'
 import { anotarMaestra, guardarClave, hayClave, marcarEsperando, motivoHello, olvidarClave, sacarClave } from './hello'
 import { leerClave, nuevaClaveSecreta, nuevoIdCuenta, formatearClave, type ClaveSecreta } from '@shared/claveSecreta'
@@ -173,7 +173,51 @@ export function exigirContrasena(contrasena: string): ClaveSecreta {
 export function hacerCopiaAhora(): string {
   const destino = hacerCopia(laCaja().db, carpeta)
   cambiarAjustes({ ultimaCopia: new Date().toISOString() })
+  copiaExtra()
   return destino
+}
+
+let falloExtra: string | null = null
+
+export function falloCopiaExtra(): string | null {
+  return falloExtra
+}
+
+/**
+ * La misma copia, también en la otra carpeta si se ha elegido. Va cifrada, así
+ * que puede estar en la nube. Si falla —la carpeta ya no existe, OneDrive sin
+ * sitio—, se apunta y se enseña en Ajustes, pero la copia de siempre ya está
+ * hecha.
+ */
+function copiaExtra(): void {
+  const dir = ajustes().carpetaCopiaExtra
+  if (!dir) return
+  try {
+    copiarEnCarpeta(laCaja().db, dir, 10)
+    falloExtra = null
+    cambiarAjustes({ ultimaCopiaExtra: new Date().toISOString() })
+  } catch (error) {
+    falloExtra = error instanceof Error ? error.message : String(error)
+    registrarFallo('copia en la otra carpeta', error)
+  }
+}
+
+/**
+ * La copia del día, si aún no hay. Se mira cada media hora y al salir: antes
+ * solo se hacía al salir, y con CLAC viviendo en la bandeja se salía poco.
+ * No hace falta que la caja esté abierta: se copia el archivo, cifrado.
+ */
+export function copiaDelDia(): void {
+  try {
+    const c = laCaja()
+    if (!c.existe()) return
+    const ultima = ajustes().ultimaCopia
+    if (ultima && ultima.slice(0, 10) === new Date().toISOString().slice(0, 10)) return
+    hacerCopiaAhora()
+    registrar('copia', 'la del día')
+  } catch (error) {
+    registrarFallo('copia del día', error)
+  }
 }
 
 /**
@@ -214,14 +258,8 @@ export function restaurarCopia(ruta: string, contrasena: string, claveEscrita: s
 export function cerrarServicio(): void {
   try {
     const c = laCaja()
-    // La copia del día, al salir, como en BONK. Va cifrada: es el archivo tal cual.
-    if (c.existe()) {
-      const ultima = leerAjustes(c.db).ultimaCopia
-      if (!ultima || ultima.slice(0, 10) !== new Date().toISOString().slice(0, 10)) {
-        hacerCopia(c.db, carpeta)
-        guardarAjustes(c.db, { ultimaCopia: new Date().toISOString() })
-      }
-    }
+    // La copia del día, al salir, si no se ha hecho ya. Va cifrada: es el archivo tal cual.
+    if (c.existe()) copiaDelDia()
   } catch {
     // Si la copia falla, no se impide salir.
   }

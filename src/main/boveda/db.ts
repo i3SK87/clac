@@ -139,7 +139,15 @@ export function transaccion<T>(db: DatabaseSync, fn: () => T): T {
  * aunque haya escrituras a medias en el WAL.
  */
 export function hacerCopia(db: DatabaseSync, carpetaDatos: string, conservar = 10): string {
-  const dir = join(carpetaDatos, 'copias')
+  return copiarEnCarpeta(db, join(carpetaDatos, 'copias'), conservar)
+}
+
+/**
+ * Una copia fechada en una carpeta, dejando solo las `conservar` últimas. Es la
+ * de cada día en `copias` y, si se ha elegido, en otra carpeta (OneDrive).
+ * Solo toca los archivos `clac-*.db`: lo demás que haya en la carpeta es suyo.
+ */
+export function copiarEnCarpeta(db: DatabaseSync, dir: string, conservar = 10): string {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   const sello = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
   const destino = join(dir, `clac-${sello}.db`)

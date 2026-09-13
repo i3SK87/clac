@@ -6,6 +6,7 @@ import {
   avisar,
   bloquear,
   cerrarServicio,
+  copiaDelDia,
   desbloquear,
   desbloquearConHello,
   estadoHelloSesion,
@@ -271,6 +272,9 @@ if (!app.requestSingleInstanceLock()) {
     // PowerShell tarda en arrancar en frío: se deja listo antes de la primera copia.
     setTimeout(precalentar, 3000)
     iniciarActualizaciones((estado) => avisar('actualizacion:cambio', estado), () => ajustes().buscarVersiones)
+    // La copia del día: al minuto de abrir y luego cada media hora, si aún no hay.
+    setTimeout(copiaDelDia, 60_000)
+    setInterval(copiaDelDia, 30 * 60_000)
     registrar('arranque', `CLAC ${app.getVersion()}`)
   })
 

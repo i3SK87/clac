@@ -132,6 +132,9 @@ const api = {
     info: () => llamar<InfoDatos>('datos:info'),
     copiaAhora: () => llamar<string>('datos:copiaAhora'),
     abrirCarpeta: () => llamar<string>('datos:abrirCarpeta'),
+    /** Elige la otra carpeta y hace una copia. `kitEnLaNube`: dónde está el kit, si está cerca. */
+    elegirCarpetaExtra: () => llamar<{ carpeta: string; kitEnLaNube: string | null } | null>('datos:elegirCarpetaExtra'),
+    quitarCarpetaExtra: () => llamar<Ajustes>('datos:quitarCarpetaExtra'),
     guardarCopiaCifrada: () => llamar<string | null>('datos:guardarCopiaCifrada'),
     exportar: (formato: 'json' | 'csv', contrasena: string) => llamar<string | null>('datos:exportar', formato, contrasena)
   },

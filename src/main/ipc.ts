@@ -6,7 +6,7 @@
  * cifrado, ni la clave secreta: pide, y aquí se hace.
  */
 import { BrowserWindow, dialog, ipcMain, shell, app } from 'electron'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
 import {
   ajustes,
@@ -21,6 +21,7 @@ import {
   estadoHelloSesion,
   estadoSesion,
   exigirContrasena,
+  falloCopiaExtra,
   hacerCopiaAhora,
   laCaja,
   restaurarCopia
@@ -84,6 +85,36 @@ let importacion: { lectura: Lectura; archivo: string; zip: Map<string, EntradaZi
 
 function datosCambiados(): void {
   avisar('datos:cambio')
+}
+
+/**
+ * Si hay un kit de emergencia en la misma nube que la carpeta elegida: en la
+ * propia carpeta, o en toda la de OneDrive si está dentro. Busca por el nombre
+ * con el que CLAC guarda el kit, sin bajar más de tres niveles.
+ */
+function kitCerca(dir: string): string | null {
+  const onedrive = process.env.OneDrive
+  const raiz = onedrive && dir.toLowerCase().startsWith(onedrive.toLowerCase()) ? onedrive : dir
+  const buscar = (carpeta: string, nivel: number): string | null => {
+    let hijos: import('node:fs').Dirent[]
+    try {
+      hijos = readdirSync(carpeta, { withFileTypes: true })
+    } catch {
+      return null
+    }
+    for (const h of hijos) {
+      if (h.isFile() && /^Kit de emergencia de CLAC.*\.pdf$/i.test(h.name)) return join(carpeta, h.name)
+    }
+    if (nivel >= 3) return null
+    for (const h of hijos) {
+      if (h.isDirectory() && !h.name.startsWith('.')) {
+        const hallado = buscar(join(carpeta, h.name), nivel + 1)
+        if (hallado) return hallado
+      }
+    }
+    return null
+  }
+  return buscar(raiz, 0)
 }
 
 function segundosPortapapeles(): number {
@@ -387,10 +418,38 @@ export function registrarIpc(entorno: Entorno): void {
       copias: contarCopias(carpetaDatos()),
       ultimaCopia: ajustes().ultimaCopia,
       elementos: c.abierta() ? c.listar().filter((e) => e.estado !== 'eliminado').length : 0,
-      bovedas: c.abierta() ? c.bovedas().length : 0
+      bovedas: c.abierta() ? c.bovedas().length : 0,
+      falloCopiaExtra: falloCopiaExtra()
     }
   })
   handle('datos:copiaAhora', () => hacerCopiaAhora())
+  /**
+   * Elegir la otra carpeta de las copias. Propone OneDrive si lo hay, hace una
+   * copia en el acto para comprobar que se puede escribir, y avisa si en esa
+   * misma nube está el kit de emergencia: la copia y la clave secreta no deben
+   * estar juntas.
+   */
+  handle('datos:elegirCarpetaExtra', async () => {
+    const onedrive = process.env.OneDrive
+    const r = await dialog.showOpenDialog(ventana(), {
+      title: 'Carpeta para las copias fuera del ordenador',
+      defaultPath: onedrive && existsSync(onedrive) ? onedrive : app.getPath('documents'),
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (r.canceled || !r.filePaths[0]) return null
+    const dir = r.filePaths[0]
+    const nuevos = cambiarAjustes({ carpetaCopiaExtra: dir })
+    entorno.alCambiarAjustes(nuevos)
+    hacerCopiaAhora()
+    const fallo = falloCopiaExtra()
+    if (fallo) throw new Error(`No se ha podido guardar ahí: ${fallo}`)
+    return { carpeta: dir, kitEnLaNube: kitCerca(dir) }
+  })
+  handle('datos:quitarCarpetaExtra', () => {
+    const nuevos = cambiarAjustes({ carpetaCopiaExtra: null })
+    entorno.alCambiarAjustes(nuevos)
+    return nuevos
+  })
   handle('datos:abrirCarpeta', () => shell.openPath(carpetaDatos()))
   handle('datos:guardarCopiaCifrada', async () => {
     const sello = new Date().toISOString().slice(0, 10)

@@ -18,6 +18,69 @@ import { ConfirmarReinicio, contarActualizacion, useActualizacion } from '../com
 const MINUTOS = [1, 2, 5, 10, 15, 30, 60, 0]
 const SEGUNDOS = [30, 60, 90, 120, 300, 0]
 
+/**
+ * La copia fuera del ordenador: cada copia de CLAC, también en otra carpeta.
+ * Pensada para una de OneDrive, que ya se sube sola a la nube.
+ */
+function CopiaFuera({ fallo }: { fallo: string | null }): ReactNode {
+  const { toast } = useAvisos()
+  const { ajustes, run } = useStore()
+  const [kit, setKit] = useState<string | null>(null)
+  const dir = ajustes.carpetaCopiaExtra
+
+  const elegir = (): void =>
+    void run(() => api.datos.elegirCarpetaExtra()).then((r) => {
+      if (!r) return
+      setKit(r.kitEnLaNube)
+      toast('Copia guardada. A partir de ahora, cada copia irá también ahí.')
+    })
+
+  return (
+    <div className="col" style={{ gap: 8 }}>
+      <div className="divider" />
+      <div className="ajuste-fila">
+        <div>
+          <strong>Copia fuera del ordenador</strong>
+          <p className="small muted">
+            {dir ? (
+              <>
+                Cada copia se guarda también en <span className="mono">{dir}</span>, con las diez últimas.
+                {ajustes.ultimaCopiaExtra ? ` La última, ${haceCuanto(ajustes.ultimaCopiaExtra)}.` : ''}
+              </>
+            ) : (
+              'Elige una carpeta de OneDrive y cada copia se guardará también ahí, en la nube. Va cifrada: sin tu contraseña y tu clave secreta no se abre.'
+            )}
+          </p>
+        </div>
+        <div className="row">
+          <button className="btn" onClick={elegir}>
+            <FolderOpen size={15} /> {dir ? 'Cambiar…' : 'Elegir carpeta…'}
+          </button>
+          {dir && (
+            <button className="btn ghost" onClick={() => void run(() => api.datos.quitarCarpetaExtra()).then((a) => a && toast('Ya no se copia fuera'))}>
+              Quitar
+            </button>
+          )}
+        </div>
+      </div>
+      {fallo && dir && (
+        <div className="aviso-fuerte mal">
+          <TriangleAlert size={15} /> La última copia no se pudo guardar ahí: {fallo}
+        </div>
+      )}
+      {kit && (
+        <div className="aviso-fuerte">
+          <TriangleAlert size={15} />
+          <span>
+            Tu kit de emergencia está en la misma nube: <span className="mono">{kit}</span>. Con el kit y la copia juntos, solo la
+            contraseña maestra protege tu caja. Imprímelo y saca el PDF de ahí.
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** La versión y el actualizador, como la tarjeta de BONK. */
 function AcercaDe({ version }: { version: string }): ReactNode {
   const { ajustes, cambiarAjustes, run } = useStore()
@@ -29,7 +92,7 @@ function AcercaDe({ version }: { version: string }): ReactNode {
         <h2>Acerca de</h2>
       </div>
       <div className="card-body col" style={{ gap: 14 }}>
-        <p className="small muted">CLAC, versión {version} · de la misma casa que BONK · tu caja fuerte se queda en este ordenador</p>
+        <p className="small muted">CLAC, versión {version} · de la misma casa que BONK · sin cuenta y sin nube, salvo la copia que tú elijas</p>
         <div className="divider" />
         <Checkbox
           checked={ajustes.buscarVersiones}
@@ -276,7 +339,7 @@ export function VistaAjustes(): ReactNode {
           {info && (
             <p className="small muted">
               {info.elementos} {info.elementos === 1 ? 'elemento' : 'elementos'} en {info.bovedas} {info.bovedas === 1 ? 'caja fuerte' : 'cajas fuertes'}.
-              Se guardan en <span className="mono">{info.carpeta}</span>. Al cerrar se hace una copia al día, y se guardan las diez últimas
+              Se guardan en <span className="mono">{info.carpeta}</span>. Cada día se hace una copia, y se guardan las diez últimas
               {info.copias ? ` (ahora hay ${info.copias})` : ''}. {info.ultimaCopia ? `La última, ${haceCuanto(info.ultimaCopia)}.` : ''}
             </p>
           )}
@@ -291,6 +354,7 @@ export function VistaAjustes(): ReactNode {
               <FolderOpen size={15} /> Abrir la carpeta
             </button>
           </div>
+          <CopiaFuera fallo={info?.falloCopiaExtra ?? null} />
           <div className="divider" />
           <div className="row wrap">
             <button className="btn" onClick={() => setModal('importar')}>

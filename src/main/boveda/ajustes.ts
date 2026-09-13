@@ -23,7 +23,9 @@ export const AJUSTES_DE_FABRICA: Ajustes = {
   ultimaCopia: null,
   navegador: false,
   windowsHello: false,
-  buscarVersiones: true
+  buscarVersiones: true,
+  carpetaCopiaExtra: null,
+  ultimaCopiaExtra: null
 }
 
 export function leerAjustes(db: DatabaseSync): Ajustes {
@@ -71,6 +73,8 @@ function sanear(a: Ajustes): Ajustes {
     ultimaCopia: typeof a.ultimaCopia === 'string' ? a.ultimaCopia : null,
     navegador: a.navegador === true,
     windowsHello: a.windowsHello === true,
-    buscarVersiones: a.buscarVersiones !== false
+    buscarVersiones: a.buscarVersiones !== false,
+    carpetaCopiaExtra: typeof a.carpetaCopiaExtra === 'string' && a.carpetaCopiaExtra.trim() ? a.carpetaCopiaExtra : null,
+    ultimaCopiaExtra: typeof a.ultimaCopiaExtra === 'string' ? a.ultimaCopiaExtra : null
   }
 }

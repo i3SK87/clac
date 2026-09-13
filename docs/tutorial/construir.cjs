@@ -198,7 +198,7 @@ const html = `<!doctype html>
     <li><div><strong>Watchtower</strong><span>El repaso de tu caja: débiles, repetidas, filtradas, caducadas.</span></div></li>
     <li><div><strong>Ordenar la caja</strong><span>Cajas fuertes, archivo y papelera.</span></div></li>
     <li><div><strong>La seguridad del día a día</strong><span>Bloqueo, Windows Hello y portapapeles.</span></div></li>
-    <li><div><strong>Copias y cambiar de ordenador</strong><span>Copias automáticas, restaurar y exportar.</span></div></li>
+    <li><div><strong>Copias y cambiar de ordenador</strong><span>Copias automáticas, la copia en OneDrive, restaurar y exportar.</span></div></li>
     <li><div><strong>Atajos de teclado</strong><span>Todos, en una tabla.</span></div></li>
     <li><div><strong>Preguntas frecuentes</strong><span>Lo que más se pregunta, con respuesta corta.</span></div></li>
   </ol>
@@ -489,7 +489,10 @@ const html = `<!doctype html>
   <h1>Copias y cambiar de ordenador</h1>
   <p class="entradilla">Tu caja fuerte es un archivo, <code>clac.db</code>, en <code>%APPDATA%\\CLAC</code>. Va cifrado: sin tu contraseña y tu clave secreta no se abre.</p></div>
   <h2>Copias automáticas</h2>
-  <p>Cada día, al cerrar CLAC, se guarda una copia en la carpeta <code>copias</code>, y se conservan las diez últimas. Desde <strong>Ajustes ▸ Datos</strong> puedes hacer una ahora, abrir la carpeta, o <strong>Guardar una copia cifrada…</strong> donde quieras: en una memoria USB, en otro disco, en la nube. Al ir cifrada, no importa dónde esté.</p>
+  <p>Cada día CLAC guarda una copia en la carpeta <code>copias</code>, aunque no la cierres, y se conservan las diez últimas. Desde <strong>Ajustes ▸ Datos</strong> puedes hacer una ahora, abrir la carpeta, o <strong>Guardar una copia cifrada…</strong> donde quieras. Al ir cifrada, no importa dónde esté.</p>
+  <h2>La copia fuera del ordenador</h2>
+  <p>Las copias de <code>copias</code> están en el mismo disco: te salvan de un error tuyo, no de que el ordenador se estropee. Para eso, en <strong>Ajustes ▸ Datos ▸ Copia fuera del ordenador</strong>, pulsa <strong>Elegir carpeta…</strong> y elige una de OneDrive (por ejemplo, crea <code>OneDrive\\CLAC</code>). Desde entonces, cada copia de CLAC se guarda también ahí, con las diez últimas, y OneDrive la sube sola a la nube.</p>
+  <div class="caja-nota importante"><strong>La copia y el kit, en sitios distintos</strong>Con la copia y el kit de emergencia juntos, solo tu contraseña maestra protegería la caja. Si el kit está en la misma nube, CLAC te avisa al elegir la carpeta. Lo mejor: el kit, impreso en casa; la copia, en OneDrive.</div>
   <h2>Llevarte la caja a otro ordenador</h2>
   <ol class="pasos">
     <li>Guarda una copia cifrada (o copia la carpeta <code>%APPDATA%\\CLAC</code> entera).</li>

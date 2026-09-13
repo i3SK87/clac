@@ -108,8 +108,13 @@ inicial sobre un color que sale del propio dominio.
 ## Tus datos y las copias
 
 Todo está en `%APPDATA%\CLAC`: la caja fuerte (`clac.db`), la clave secreta
-cifrada con Windows y la subcarpeta `copias`, donde se guarda una copia al día al
-cerrar (las diez últimas). Las copias van cifradas igual que la caja.
+cifrada con Windows y la subcarpeta `copias`, donde se guarda una copia al día
+(las diez últimas), aunque CLAC no se cierre. Las copias van cifradas igual que la caja.
+
+En **Ajustes ▸ Datos ▸ Copia fuera del ordenador** se elige otra carpeta —una de
+OneDrive, por ejemplo— y cada copia se guarda también ahí. Si en esa misma nube
+está el kit de emergencia, CLAC lo avisa: la copia y la clave secreta no deben
+estar juntas.
 
 Para llevártela a otro ordenador: instala CLAC allí, elige «Restaurar una copia»
 y ábrela con tu contraseña y la clave secreta del kit de emergencia.
