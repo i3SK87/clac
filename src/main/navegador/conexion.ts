@@ -11,7 +11,9 @@
  *    Se hace con `reg.exe`: sin módulos nativos.
  *
  * 2. **Escuchar** en un canal con nombre de Windows, que solo es de este usuario.
- *    El puente entra por ahí, una línea por mensaje.
+ *    El puente entra por ahí, una línea por mensaje. En la puerta está el
+ *    portero (`portero.ts`): solo deja pasar al CLAC.exe de esta instalación
+ *    cuando lo ha abierto un navegador.
  *
  * Todo esto solo existe con el ajuste encendido. Apagarlo borra las claves del
  * registro y cierra el canal.
@@ -19,13 +21,13 @@
 import { app } from 'electron'
 import { execFile } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { createServer, type Server } from 'node:net'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import anfitrion from './anfitrion.cjs?raw'
 import { atender, type Piezas } from './protocolo'
 import { NOMBRE_ANFITRION, type Peticion } from '@shared/navegador'
-import { registrarFallo } from '../registro'
+import { registrar, registrarFallo } from '../registro'
+import { arrancarPortero, type Portero } from './portero'
 import type { InfoNavegador } from '@shared/tipos'
 
 const ejecutar = promisify(execFile)
@@ -44,8 +46,10 @@ const CLAVES = [
 
 export const TUBO = `\\\\.\\pipe\\clac-navegador-${String(process.env.USERNAME || 'usuario').toLowerCase()}`
 
-let servidor: Server | null = null
+let portero: Portero | null = null
 let ultimaConexion: string | null = null
+/** Reintentos si el portero se cae, para no quedarse arrancándolo en bucle. */
+let reintentos = 0
 
 function carpetaPuente(): string {
   return join(app.getPath('userData'), 'navegador')
@@ -113,41 +117,37 @@ async function registrado(): Promise<boolean> {
 }
 
 function escuchar(piezas: Piezas): void {
-  if (servidor) return
-  servidor = createServer((socket) => {
-    ultimaConexion = new Date().toISOString()
-    socket.setEncoding('utf8')
-    let pendiente = ''
-    socket.on('data', (trozo: string) => {
-      pendiente += trozo
-      let salto: number
-      while ((salto = pendiente.indexOf('\n')) >= 0) {
-        const linea = pendiente.slice(0, salto)
-        pendiente = pendiente.slice(salto + 1)
-        if (!linea.trim()) continue
-        let peticion: Peticion
-        try {
-          peticion = JSON.parse(linea) as Peticion
-        } catch {
-          continue
-        }
-        void atender(peticion, piezas).then((r) => {
-          if (!socket.destroyed) socket.write(JSON.stringify(r) + '\n')
-        })
+  if (portero) return
+  const este = arrancarPortero({
+    tubo: TUBO,
+    exe: process.execPath,
+    alPedir: async (linea) => {
+      let peticion: Peticion
+      try {
+        peticion = JSON.parse(linea) as Peticion
+      } catch {
+        return JSON.stringify({ id: 0, ok: false, error: 'Mensaje ilegible.' })
       }
-    })
-    socket.on('error', () => socket.destroy())
+      return JSON.stringify(await atender(peticion, piezas))
+    },
+    alAbrir: () => {
+      ultimaConexion = new Date().toISOString()
+      reintentos = 0
+    },
+    alRechazar: (pid, motivo) => registrar('navegador', `rechazada una conexión (proceso ${pid}): ${motivo}`),
+    alFallar: (mensaje) => {
+      registrar('navegador', `portero: ${mensaje}`)
+      if (!/se ha cerrado/.test(mensaje) || portero !== este) return
+      portero = null
+      if (reintentos++ < 5) setTimeout(() => escuchar(piezas), 3000 * reintentos)
+    }
   })
-  servidor.on('error', (error) => {
-    registrarFallo('navegador', error)
-    servidor = null
-  })
-  servidor.listen(TUBO)
+  portero = este
 }
 
 function dejarDeEscuchar(): void {
-  servidor?.close()
-  servidor = null
+  portero?.parar()
+  portero = null
 }
 
 /**

@@ -11,6 +11,7 @@ import { deflateRawSync, crc32 } from 'node:zlib'
 import { createServer } from 'node:net'
 import { spawn } from 'node:child_process'
 import { atender, type Piezas } from '../src/main/navegador/protocolo'
+import { arrancarPortero } from '../src/main/navegador/portero'
 
 import { enteroAleatorio, barajar } from '../src/shared/aleatorio'
 import { ALFABETO, formatearClave, leerClave, nuevaClaveSecreta, nuevoIdCuenta } from '../src/shared/claveSecreta'
@@ -788,6 +789,72 @@ async function main(): Promise<void> {
     for (let i = 0; i < 50 && respuestas.length < 3; i++) await new Promise((r) => setTimeout(r, 50))
     check('con CLAC cerrada, lo dice', (respuestas[2] as { cerrada?: boolean })?.cerrada === true)
     puente.stdin.end()
+  }
+
+  /* ================================================================ */
+  section('El portero del canal')
+  {
+    // Aquí el «navegador» es este Node y el «puente de CLAC», el Node que lo
+    // arranca: la misma familia que Opera ▸ cmd.exe ▸ CLAC.exe, con otros nombres.
+    const anfitrion = join(process.cwd(), 'src', 'main', 'navegador', 'anfitrion.cjs')
+    const probar = async (
+      nombre: string,
+      exe: string,
+      navegadores: string[],
+      conCmd = false
+    ): Promise<{ respuesta: { ok?: boolean; datos?: { eco: string } } | null; rechazo: string | null; pedidas: string[] }> => {
+      const usuario = `portero-${nombre}-${process.pid}`
+      const pedidas: string[] = []
+      let rechazo: string | null = null
+      let listo = false
+      const portero = arrancarPortero({
+        tubo: `\\\\.\\pipe\\clac-navegador-${usuario}`,
+        exe,
+        navegadores,
+        alPedir: async (linea) => {
+          pedidas.push(linea)
+          const p = JSON.parse(linea) as { id: number; tipo: string }
+          return JSON.stringify({ id: p.id, ok: true, datos: { eco: p.tipo } })
+        },
+        alRechazar: (_pid, motivo) => (rechazo = motivo),
+        alListo: () => (listo = true)
+      })
+      for (let i = 0; i < 200 && !listo; i++) await new Promise((r) => setTimeout(r, 50))
+      // El navegador de verdad lo arranca así: cmd.exe /d /c, y cmd.exe al puente.
+      const puente = conCmd
+        ? spawn('cmd.exe', ['/d', '/c', process.execPath, anfitrion], { env: { ...process.env, USERNAME: usuario } })
+        : spawn(process.execPath, [anfitrion], { env: { ...process.env, USERNAME: usuario } })
+      let bruto = Buffer.alloc(0)
+      let respuesta: { ok?: boolean; datos?: { eco: string } } | null = null
+      puente.stdout.on('data', (d: Buffer) => {
+        bruto = Buffer.concat([bruto, d])
+        if (bruto.length >= 4 && bruto.length >= 4 + bruto.readUInt32LE(0)) respuesta = JSON.parse(bruto.subarray(4, 4 + bruto.readUInt32LE(0)).toString('utf8'))
+      })
+      const cuerpo = Buffer.from(JSON.stringify({ id: 1, tipo: 'estado' }), 'utf8')
+      const cab = Buffer.alloc(4)
+      cab.writeUInt32LE(cuerpo.length)
+      puente.stdin.write(Buffer.concat([cab, cuerpo]))
+      for (let i = 0; i < 60 && !respuesta && !rechazo; i++) await new Promise((r) => setTimeout(r, 50))
+      await new Promise((r) => setTimeout(r, 150))
+      puente.stdin.end()
+      portero.parar()
+      return { respuesta, rechazo, pedidas }
+    }
+
+    const bueno = await probar('bueno', process.execPath, ['node.exe'])
+    check('el portero abre el canal y deja pasar al puente', bueno.respuesta?.ok === true && bueno.respuesta.datos?.eco === 'estado', String(bueno.rechazo))
+    equal('y la petición llega a CLAC', bueno.pedidas.length, 1)
+
+    const porCmd = await probar('cmd', process.execPath, ['node.exe'], true)
+    check('también con cmd.exe en medio, como lo abre el navegador', porCmd.respuesta?.ok === true, String(porCmd.rechazo))
+
+    const otro = await probar('otro', 'C:\\Windows\\notepad.exe', ['node.exe'])
+    check('otro programa no pasa', otro.rechazo !== null && /no es el puente de CLAC/.test(otro.rechazo), String(otro.rechazo))
+    equal('y a CLAC no le llega nada', otro.pedidas.length, 0)
+
+    const sinNavegador = await probar('huerfano', process.execPath, ['opera.exe', 'chrome.exe'])
+    check('el puente arrancado fuera del navegador no pasa', sinNavegador.rechazo !== null && /no lo ha abierto un navegador/.test(sinNavegador.rechazo), String(sinNavegador.rechazo))
+    equal('y tampoco le llega nada', sinNavegador.pedidas.length, 0)
   }
 
   console.log(`\n${passed} bien, ${failed} mal`)

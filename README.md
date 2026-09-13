@@ -86,6 +86,11 @@ guarda nada: cada vez pregunta a CLAC, por la mensajería nativa de Chromium, a
 través de un puente pequeño que es el propio `CLAC.exe` en modo Node. Solo rellena
 cuando la pulsas, y nunca envía el formulario por ti.
 
+En la puerta del canal hay un portero (`src/main/navegador/portero.ts`): Windows
+le dice qué proceso se ha conectado, y solo deja pasar al `CLAC.exe` de la
+instalación cuando lo ha abierto un navegador. El canal, además, solo admite al
+usuario y rechaza la red.
+
 ## Internet
 
 CLAC sale a internet para dos cosas:

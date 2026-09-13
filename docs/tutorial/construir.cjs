@@ -419,7 +419,7 @@ const html = `<!doctype html>
     </div>
     ${figura('p04-extension-bloqueada', 'Bloqueada, y con Windows Hello activado.')}
   </div>
-  <div class="caja-nota truco"><strong>Qué puede ver la extensión</strong>Solo la pestaña en la que la pulsas, y solo en ese momento. No lee las webs que visitas ni guarda nada: cada vez le pregunta a CLAC, que tiene que estar abierta (si no, te ofrece abrirla) y desbloqueada.</div>
+  <div class="caja-nota truco"><strong>Qué puede ver la extensión</strong>Solo la pestaña en la que la pulsas, y solo en ese momento. No lee las webs que visitas ni guarda nada: cada vez le pregunta a CLAC, que tiene que estar abierta (si no, te ofrece abrirla) y desbloqueada. Y CLAC solo contesta a su propio puente cuando lo ha abierto el navegador: si otro programa del ordenador intenta pedirle contraseñas, no le abre la puerta.</div>
 </section>
 
 <!-- 10 -->
