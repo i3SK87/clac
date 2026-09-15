@@ -169,13 +169,17 @@ export function Detalle({ id, alEditar }: { id: string; alEditar: () => void }):
       .catch((err) => {
         if (vivo) {
           setE(null)
-          fail(err)
+          if (err instanceof Error && err.message === 'Ese elemento ya no existe.') {
+            seleccionar(null)
+          } else {
+            fail(err)
+          }
         }
       })
     return () => {
       vivo = false
     }
-  }, [id, revision, fail])
+  }, [id, revision, fail, seleccionar])
 
   // Cambiar de elemento vuelve a esconderlo todo.
   useEffect(() => setRevelarTodo(false), [id])

@@ -493,6 +493,7 @@ async function main(): Promise<void> {
     equal('a los 29 días sigue', caja.purgarPapelera(new Date(Date.now() + 29 * 86_400_000)), 0)
     equal('a los 31 se va', caja.purgarPapelera(new Date(Date.now() + 31 * 86_400_000)), 1)
     equal('con su adjunto', (caja.db.prepare('SELECT COUNT(*) AS n FROM adjuntos').get() as { n: number }).n, 1)
+    throws('obtener uno purgado falla', () => caja.obtener(copia.id), /Ese elemento ya no existe/)
 
     // Contraseña maestra
     check('comprobar la contraseña', caja.comprobarContrasena('una contraseña bastante larga', clave.secreto))
