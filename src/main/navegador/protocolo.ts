@@ -175,6 +175,9 @@ async function responder(p: Peticion, piezas: Piezas): Promise<unknown> {
       return r
     }
     case 'abrirElemento':
+      // Si el popup lleva un rato abierto, su lista puede ir por detrás de la
+      // caja: mejor que lo diga aquí a que la ventana reciba un id que ya no está.
+      caja.obtener(p.elementoId)
       piezas.abrirElemento(p.elementoId)
       return null
   }

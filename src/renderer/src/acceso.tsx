@@ -147,7 +147,7 @@ function Acceso(): ReactNode {
     } else if (ev.ctrlKey && k === 'o') {
       ev.preventDefault()
       const e = resultados[indice]
-      if (e) void api.acceso.abrirEnApp(e.id)
+      if (e) api.acceso.abrirEnApp(e.id).catch((err) => setMensaje({ texto: mensajeDeError(err), error: true }))
     }
   }
 

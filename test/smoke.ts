@@ -754,6 +754,11 @@ async function main(): Promise<void> {
     check('y con la buena abre', buena.ok && caja.abierta())
     await atender({ id: 14, tipo: 'abrirElemento', elementoId: g.id }, piezas)
     equal('abrir en CLAC pasa el elemento', abiertos[0], g.id)
+    // Si la lista del popup va por detrás de la caja (el elemento ya no está),
+    // que lo diga la extensión y no que le llegue a la ventana un id roto.
+    const abrirBorrado = await atender({ id: 15, tipo: 'abrirElemento', elementoId: 'no-existe' }, piezas)
+    check('abrir un elemento que ya no existe falla', !abrirBorrado.ok && /ya no existe/.test(abrirBorrado.error ?? ''))
+    equal('y no llega a la ventana', abiertos.length, 1)
     caja.cerrar()
 
     // El puente, de verdad: un Node que habla mensajería nativa por un lado y

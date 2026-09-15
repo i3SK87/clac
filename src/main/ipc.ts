@@ -364,6 +364,9 @@ export function registrarIpc(entorno: Entorno): void {
   })
   handle('acceso:ocultar', () => ocultarAcceso())
   handle('acceso:abrirEnApp', (id: string) => {
+    // Los resultados del acceso rápido pueden llevar un rato en pantalla:
+    // mejor comprobar aquí que mandar a la ventana un id que ya no existe.
+    laCaja().obtener(id)
     ocultarAcceso()
     entorno.mostrarPrincipal()
     entorno.ventanaPrincipal()?.webContents.send('abrir:elemento', id)

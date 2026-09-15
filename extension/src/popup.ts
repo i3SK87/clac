@@ -346,7 +346,11 @@ function pintarLista(lista: HTMLElement, avisos: HTMLElement, consulta: string):
       e.usuario && boton('user', 'Copiar el usuario', () => void copiar(e, 'usuario', avisos)),
       e.tieneContrasena && boton('key', 'Copiar la contraseña', () => void copiar(e, 'contrasena', avisos)),
       e.tieneTotp && boton('clock', 'Copiar el código', () => void copiar(e, 'totp', avisos)),
-      boton('external', 'Abrir en CLAC', () => void pedir({ tipo: 'abrirElemento', elementoId: e.id }).then(() => window.close()))
+      boton('external', 'Abrir en CLAC', () =>
+        void pedir({ tipo: 'abrirElemento', elementoId: e.id })
+          .then(() => window.close())
+          .catch((err) => avisos.replaceChildren(mensaje(err instanceof Error ? err.message : String(err))))
+      )
     )
     filas.push(
       h(
