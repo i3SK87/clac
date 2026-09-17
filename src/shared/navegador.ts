@@ -24,11 +24,17 @@ export type Peticion =
   | { id: number; tipo: 'guardar'; url: string; titulo: string; usuario: string; contrasena: string }
   | { id: number; tipo: 'abrirElemento'; elementoId: string }
   | { id: number; tipo: 'abrirApp' }
+  /* Las llaves de acceso: ver más abajo. */
+  | { id: number; tipo: 'llaves'; origen: string; rpId?: string }
+  | ({ id: number; tipo: 'llaveCrear' } & PeticionCrearLlave)
+  | ({ id: number; tipo: 'llaveFirmar' } & PeticionFirmarLlave)
 
 export interface Respuesta {
   id: number
   ok: boolean
   error?: string
+  /** El nombre del fallo tal y como lo espera una web: «NotAllowedError»… */
+  nombreError?: string
   /** El puente no ha encontrado CLAC abierta. */
   cerrada?: boolean
   datos?: unknown
@@ -67,4 +73,74 @@ export interface ResultadoGuardar {
   accion: 'creado' | 'actualizado'
   id: string
   titulo: string
+}
+
+/* ---------- Llaves de acceso ---------- */
+
+/**
+ * Lo que la extensión puede pedir desde una página web. El `origen` de estas
+ * tres lo pone el service worker con lo que dice el navegador (`sender.origin`),
+ * nunca la página: es lo único que impide que una web pida las llaves de otra.
+ * Lo demás —buscar, credenciales, copiar— no se atiende desde una página.
+ */
+export const PETICIONES_DE_PAGINA = ['llaves', 'llaveCrear', 'llaveFirmar', 'desbloquearHello'] as const
+
+/** Una llave guardada, para elegirla en el aviso de la página. */
+export interface LlaveNavegador {
+  id: string
+  elementoId: string
+  titulo: string
+  usuario: string
+  creada: string
+}
+
+export interface PeticionCrearLlave {
+  origen: string
+  rpId?: string
+  rpNombre?: string
+  /** El identificador que la web le da a tu cuenta, en base64url. */
+  usuarioId: string
+  usuario: string
+  nombre?: string
+  /** El reto de la web, en base64url. */
+  reto: string
+  /** Los algoritmos que acepta la web, en números COSE (-7 es ES256). */
+  algoritmos: number[]
+  /** Credenciales que la web ya tiene: si una es de CLAC, no se hace otra. */
+  excluir: string[]
+}
+
+export interface PeticionFirmarLlave {
+  origen: string
+  rpId?: string
+  reto: string
+  credencial: string
+}
+
+export interface RespuestaCrearLlave {
+  id: string
+  elementoId: string
+  clientDataJSON: string
+  attestationObject: string
+  authenticatorData: string
+  clavePublica: string
+  algoritmo: number
+}
+
+export interface RespuestaFirmarLlave {
+  id: string
+  elementoId: string
+  clientDataJSON: string
+  authenticatorData: string
+  firma: string
+  usuarioId: string
+}
+
+/** Lo que hay que saber para dibujar el aviso: cómo está CLAC y qué llaves tiene de esta web. */
+export interface EstadoLlaves {
+  sesion: EstadoSesion
+  hello: boolean
+  tema: Tema
+  paleta: Paleta
+  llaves: LlaveNavegador[]
 }

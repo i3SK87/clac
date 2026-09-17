@@ -43,6 +43,8 @@ export type TipoCampo =
   | 'totp'
   | 'multilinea'
   | 'ocultoMultilinea'
+  /** Una llave de acceso (WebAuthn): la pone la extensión; no se escribe ni se copia a mano. */
+  | 'llave'
 
 export interface Campo {
   id: string

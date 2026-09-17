@@ -11,6 +11,9 @@ import { deflateRawSync, crc32 } from 'node:zlib'
 import { createServer } from 'node:net'
 import { spawn } from 'node:child_process'
 import { atender, type Piezas } from '../src/main/navegador/protocolo'
+import { PETICIONES_DE_PAGINA, type EstadoLlaves, type RespuestaCrearLlave, type RespuestaFirmarLlave } from '../src/shared/navegador'
+import { llavesDe, rpIdDe } from '../src/shared/llaves'
+import { createHash, createPublicKey, verify } from 'node:crypto'
 import { arrancarPortero } from '../src/main/navegador/portero'
 
 import { enteroAleatorio, barajar } from '../src/shared/aleatorio'
@@ -26,7 +29,7 @@ import { desde1pux, leerExportacion } from '../src/shared/importar'
 import { revisar } from '../src/shared/watchtower'
 import { CATEGORIAS, categoria, contrasenaDe, seccionesDePlantilla, subtituloDe, usuarioDe } from '../src/shared/categorias'
 import { PALABRAS } from '../src/shared/palabras'
-import type { Detalle, ElementoEntrada, ElementoLista, Seccion } from '../src/shared/tipos'
+import type { Detalle, ElementoEntrada, ElementoLista, EstadoSesion, Seccion } from '../src/shared/tipos'
 
 import { abrir, derivarClaveDesbloqueo, sellar, ErrorDescifrado, KDF_POR_DEFECTO } from '../src/main/boveda/cripto'
 import { CajaFuerte, ErrorBloqueada, ErrorContrasena } from '../src/main/boveda/boveda'
@@ -827,6 +830,205 @@ async function main(): Promise<void> {
   }
 
   /* ================================================================ */
+  section('Llaves de acceso')
+  {
+    // El dominio de la llave, que es lo que impide usarla en una web falsa.
+    equal('sin rpId, el de la página', rpIdDe('https://github.com'), 'github.com')
+    equal('un subdominio puede pedir el dominio de arriba', rpIdDe('https://gist.github.com', 'github.com'), 'github.com')
+    throws('pero no al revés', () => rpIdDe('https://github.com', 'gist.github.com'), /pide una llave/)
+    throws('ni el de otra web', () => rpIdDe('https://acceso-seguro.com', 'santander.es'), /pide una llave/)
+    throws('ni un sufijo público', () => rpIdDe('https://tienda.ejemplo.co.uk', 'co.uk'), /no es un dominio/)
+    throws('ni uno donde cualquiera abre su sitio', () => rpIdDe('https://ana.github.io', 'github.io'), /no es un dominio/)
+    throws('ni una web sin cifrar', () => rpIdDe('http://ejemplo.es'), /https/)
+    throws('ni una dirección IP', () => rpIdDe('https://192.168.1.10'), /dominio/)
+    equal('en local sí, para probar', rpIdDe('http://localhost:8080'), 'localhost')
+
+    const dir = carpetaTemporal()
+    const caja = new CajaFuerte(dir, { N: 2 ** 10 })
+    const clave = nuevaClaveSecreta(nuevoIdCuenta())
+    caja.crear('una contraseña bastante larga', clave)
+    let estado: EstadoSesion = 'abierta'
+    let cambios = 0
+    const piezas: Piezas = {
+      caja: () => caja,
+      estado: () => estado,
+      ajustes: () => leerAjustes(caja.db),
+      version: '9.9.9',
+      desbloquear: (pw) => void caja.desbloquear(pw, clave.secreto),
+      helloListo: () => true,
+      desbloquearHello: async () => undefined,
+      copiar: async () => ({ segundos: 90 }),
+      abrirElemento: () => undefined,
+      alCambiar: () => cambios++
+    }
+
+    const reto = Buffer.from('un reto de la web que tiene 32 by').toString('base64url')
+    const usuarioId = Buffer.from([1, 2, 3, 4]).toString('base64url')
+    const crear = await atender(
+      {
+        id: 1,
+        tipo: 'llaveCrear',
+        origen: 'https://github.com',
+        rpId: 'github.com',
+        rpNombre: 'GitHub',
+        usuarioId,
+        usuario: 'ana-dev',
+        nombre: 'Ana',
+        reto,
+        algoritmos: [-7, -257],
+        excluir: []
+      },
+      piezas
+    )
+    check('se crea la llave', crear.ok, crear.error ?? '')
+    const hecha = crear.datos as RespuestaCrearLlave
+    check('lo que sale hacia el navegador no lleva la clave privada', !JSON.stringify(hecha).includes('privada'))
+    equal('avisa a la ventana de que hay algo nuevo', cambios, 1)
+
+    // A partir de aquí se comprueba como lo haría la web: descifrando el CBOR
+    // de la atestación con un lector escrito aparte, aquí mismo.
+    const atestacion = leerCbor(Buffer.from(hecha.attestationObject, 'base64url')) as Record<string, unknown>
+    equal('la atestación es «none»', atestacion.fmt, 'none')
+    equal('y no cuenta nada del aparato', JSON.stringify(atestacion.attStmt), '{}')
+    const datos = atestacion.authData as Buffer
+    check('el resumen del dominio es el de github.com', datos.subarray(0, 32).equals(sha256Prueba('github.com')))
+    const banderas = datos[32]
+    check('dice que hay alguien delante y verificado', (banderas & 0x01) !== 0 && (banderas & 0x04) !== 0)
+    check('y que lleva credencial dentro', (banderas & 0x40) !== 0)
+    equal('el contador va a cero', datos.readUInt32BE(33), 0)
+    check('el AAGUID va a ceros', datos.subarray(37, 53).every((b) => b === 0))
+    const largoId = datos.readUInt16BE(53)
+    equal('el identificador de la credencial es el que dice', datos.subarray(55, 55 + largoId).toString('base64url'), hecha.id)
+    const cose = leerCbor(datos.subarray(55 + largoId)) as Record<number, unknown>
+    equal('la clave pública es ES256', cose[3], -7)
+    equal('en la curva P-256', cose[-1], 1)
+    const publica = createPublicKey({
+      key: { kty: 'EC', crv: 'P-256', x: (cose[-2] as Buffer).toString('base64url'), y: (cose[-3] as Buffer).toString('base64url') },
+      format: 'jwk'
+    })
+    check(
+      'la clave pública suelta es la misma que la del CBOR',
+      publica.export({ type: 'spki', format: 'der' }).toString('base64url') === hecha.clavePublica
+    )
+    const cliente = JSON.parse(Buffer.from(hecha.clientDataJSON, 'base64url').toString('utf8')) as Record<string, unknown>
+    equal('el clientData es de creación', cliente.type, 'webauthn.create')
+    equal('con el reto de la web', cliente.challenge, reto)
+    equal('y con el origen de verdad', cliente.origin, 'https://github.com')
+
+    // Dónde ha quedado guardada.
+    const elemento = caja.obtener(hecha.elementoId)
+    equal('se guarda como un inicio de sesión', elemento.categoria, 'login')
+    equal('con el nombre de la web', elemento.titulo, 'GitHub')
+    equal('y su origen', elemento.webs[0], 'https://github.com')
+    equal('con el usuario de la cuenta', usuarioDe(elemento), 'ana-dev')
+    equal('y sin contraseña', contrasenaDe(elemento), '')
+    const guardadas = llavesDe(elemento)
+    equal('lleva una llave dentro', guardadas.length, 1)
+    equal('en un campo que no se teclea', guardadas[0].campo.tipo, 'llave')
+    equal('de github.com', guardadas[0].llave.rpId, 'github.com')
+
+    // Entrar: la firma se comprueba con la clave pública, como haría la web.
+    const retoEntrar = Buffer.from('otro reto distinto, este de entrar').toString('base64url')
+    const entrar = await atender(
+      { id: 2, tipo: 'llaveFirmar', origen: 'https://github.com', rpId: 'github.com', reto: retoEntrar, credencial: hecha.id },
+      piezas
+    )
+    check('firma al entrar', entrar.ok, entrar.error ?? '')
+    const firmado = entrar.datos as RespuestaFirmarLlave
+    const datosEntrar = Buffer.from(firmado.authenticatorData, 'base64url')
+    const clienteEntrar = Buffer.from(firmado.clientDataJSON, 'base64url')
+    equal('el clientData es de entrada', JSON.parse(clienteEntrar.toString('utf8')).type, 'webauthn.get')
+    equal('sin la credencial dentro, que ya la tiene la web', datosEntrar.length, 37)
+    check(
+      'y la firma cuadra con la clave pública',
+      verify('sha256', Buffer.concat([datosEntrar, sha256Prueba(clienteEntrar)]), publica, Buffer.from(firmado.firma, 'base64url'))
+    )
+    check(
+      'una firma no vale con otro reto',
+      !verify(
+        'sha256',
+        Buffer.concat([datosEntrar, sha256Prueba(Buffer.from('{"type":"webauthn.get","challenge":"otro"}'))]),
+        publica,
+        Buffer.from(firmado.firma, 'base64url')
+      )
+    )
+    equal('devuelve la cuenta de la web', firmado.usuarioId, usuarioId)
+    equal('y apunta el uso', caja.listar().find((e) => e.id === hecha.elementoId)?.usos, 1)
+
+    // Lo que no puede pasar.
+    const otraWeb = await atender(
+      { id: 3, tipo: 'llaveFirmar', origen: 'https://github.com.acceso-seguro.es', rpId: 'github.com', reto: retoEntrar, credencial: hecha.id },
+      piezas
+    )
+    check('una web falsa no consigue que firme', !otraWeb.ok && otraWeb.nombreError === 'SecurityError')
+    const sinLlave = await atender(
+      { id: 4, tipo: 'llaveFirmar', origen: 'https://github.com', reto: retoEntrar, credencial: 'aaaaaaaaaaaaaaaaaaaaaa' },
+      piezas
+    )
+    check('una credencial que no está, tampoco', !sinLlave.ok && sinLlave.nombreError === 'NotAllowedError')
+    const repetida = await atender(
+      { id: 5, tipo: 'llaveCrear', origen: 'https://github.com', rpId: 'github.com', usuarioId, usuario: 'ana-dev', reto, algoritmos: [-7], excluir: [hecha.id] },
+      piezas
+    )
+    check('si la web ya tiene la llave, se le dice', !repetida.ok && repetida.nombreError === 'InvalidStateError')
+    const sinEs256 = await atender(
+      { id: 6, tipo: 'llaveCrear', origen: 'https://github.com', usuarioId, usuario: 'ana-dev', reto, algoritmos: [-257], excluir: [] },
+      piezas
+    )
+    check('y si pide otro tipo de clave, también', !sinEs256.ok && sinEs256.nombreError === 'NotSupportedError')
+
+    // Buscar las llaves de una web.
+    const cuales = await atender({ id: 7, tipo: 'llaves', origen: 'https://gist.github.com', rpId: 'github.com' }, piezas)
+    const estadoLlaves = cuales.datos as EstadoLlaves
+    equal('desde un subdominio se ven las del dominio', estadoLlaves.llaves.length, 1)
+    equal('con el usuario para elegir', estadoLlaves.llaves[0].usuario, 'ana-dev')
+    check('y no viaja nada de la clave privada', !JSON.stringify(estadoLlaves).includes('privada'))
+    const enOtra = await atender({ id: 8, tipo: 'llaves', origen: 'https://www.ejemplo.es' }, piezas)
+    equal('en otra web no hay ninguna', (enOtra.datos as EstadoLlaves).llaves.length, 0)
+
+    // La misma cuenta otra vez: se cambia la llave, no se apilan.
+    const segunda = await atender(
+      { id: 9, tipo: 'llaveCrear', origen: 'https://github.com', rpId: 'github.com', usuarioId, usuario: 'ana-dev', reto, algoritmos: [-7], excluir: [] },
+      piezas
+    )
+    const dosVeces = await atender({ id: 10, tipo: 'llaves', origen: 'https://github.com' }, piezas)
+    equal('crear otra para la misma cuenta la sustituye', (dosVeces.datos as EstadoLlaves).llaves.length, 1)
+    equal('en el mismo elemento', (segunda.datos as RespuestaCrearLlave).elementoId, hecha.elementoId)
+    check('y la de antes se queda en el historial', caja.historial(hecha.elementoId).length > 0)
+
+    // Otra cuenta de la misma web: un elemento nuevo.
+    const otraCuenta = await atender(
+      {
+        id: 11,
+        tipo: 'llaveCrear',
+        origen: 'https://github.com',
+        rpId: 'github.com',
+        usuarioId: Buffer.from([9, 9]).toString('base64url'),
+        usuario: 'ana-trabajo',
+        reto,
+        algoritmos: [-7],
+        excluir: []
+      },
+      piezas
+    )
+    check('otra cuenta de la misma web va a su elemento', (otraCuenta.datos as RespuestaCrearLlave).elementoId !== hecha.elementoId)
+    equal('y salen las dos para elegir', ((await atender({ id: 12, tipo: 'llaves', origen: 'https://github.com' }, piezas)).datos as EstadoLlaves).llaves.length, 2)
+
+    // Con la caja bloqueada no se firma, pero se puede saber que está bloqueada.
+    caja.bloquear()
+    estado = 'bloqueada'
+    const cerrada = await atender({ id: 13, tipo: 'llaves', origen: 'https://github.com' }, piezas)
+    check('bloqueada, lo dice y no enseña ninguna', cerrada.ok && (cerrada.datos as EstadoLlaves).sesion === 'bloqueada' && (cerrada.datos as EstadoLlaves).llaves.length === 0)
+    const mentira = await atender({ id: 14, tipo: 'llaves', origen: 'https://acceso-seguro.com', rpId: 'santander.es' }, piezas)
+    check('y bloqueada tampoco se cree el dominio que diga la web', !mentira.ok && mentira.nombreError === 'SecurityError')
+    const noFirma = await atender({ id: 15, tipo: 'llaveFirmar', origen: 'https://github.com', reto: retoEntrar, credencial: hecha.id }, piezas)
+    check('y no firma nada', !noFirma.ok && /bloqueada/.test(noFirma.error ?? ''))
+    caja.cerrar()
+
+    check('desde una página solo se pueden pedir cuatro cosas', PETICIONES_DE_PAGINA.join(',') === 'llaves,llaveCrear,llaveFirmar,desbloquearHello')
+    check('nunca las credenciales de un elemento', !(PETICIONES_DE_PAGINA as readonly string[]).includes('credenciales'))
+  }
+
   section('El portero del canal')
   {
     // Aquí el «navegador» es este Node y el «puente de CLAC», el Node que lo
@@ -895,6 +1097,42 @@ async function main(): Promise<void> {
   console.log(`\n${passed} bien, ${failed} mal`)
   for (const dir of carpetas) rmSync(dir, { recursive: true, force: true })
   if (failed > 0) process.exit(1)
+}
+
+/** Un lector de CBOR escrito aquí aparte, para comprobar lo que sale de CLAC. */
+function leerCbor(b: Buffer, pos = { i: 0 }): unknown {
+  const inicial = b[pos.i++]
+  const mayor = inicial >> 5
+  const corto = inicial & 0x1f
+  let largo = corto
+  if (corto === 24) largo = b[pos.i++]
+  else if (corto === 25) {
+    largo = b.readUInt16BE(pos.i)
+    pos.i += 2
+  } else if (corto === 26) {
+    largo = b.readUInt32BE(pos.i)
+    pos.i += 4
+  }
+  if (mayor === 0) return largo
+  if (mayor === 1) return -largo - 1
+  if (mayor === 2 || mayor === 3) {
+    const trozo = b.subarray(pos.i, pos.i + largo)
+    pos.i += largo
+    return mayor === 2 ? trozo : trozo.toString('utf8')
+  }
+  if (mayor === 5) {
+    const mapa: Record<string, unknown> = {}
+    for (let i = 0; i < largo; i++) {
+      const llave = leerCbor(b, pos) as string | number
+      mapa[String(llave)] = leerCbor(b, pos)
+    }
+    return mapa
+  }
+  throw new Error('CBOR que no se entiende')
+}
+
+function sha256Prueba(dato: Buffer | string): Buffer {
+  return createHash('sha256').update(dato).digest()
 }
 
 function conValores(categoriaId: ElementoLista['categoria'], valores: Record<string, string>): Detalle {

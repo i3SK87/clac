@@ -11,7 +11,9 @@ import { codigoTotp, leerTotp } from '@shared/totp'
 import { dominioBase, dominioDe } from '@shared/webs'
 import type { CajaFuerte } from '../boveda/boveda'
 import type { Ajustes, ElementoLista, EstadoSesion } from '@shared/tipos'
-import type { Credenciales, ElementoNavegador, EstadoNavegador, Peticion, Respuesta, ResultadoGuardar } from '@shared/navegador'
+import { ErrorLlave, rpIdDe } from '@shared/llaves'
+import { crearLlave, firmarLlave, llavesParaWeb } from './llaves'
+import type { Credenciales, ElementoNavegador, EstadoLlaves, EstadoNavegador, Peticion, Respuesta, ResultadoGuardar } from '@shared/navegador'
 
 export interface Piezas {
   caja: () => CajaFuerte
@@ -126,7 +128,14 @@ export async function atender(p: Peticion, piezas: Piezas): Promise<Respuesta> {
     const datos = await responder(p, piezas)
     return { id: p.id, ok: true, datos }
   } catch (error) {
-    return { id: p.id, ok: false, error: error instanceof Error ? error.message : String(error) }
+    return {
+      id: p.id,
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+      // A la página le hace falta el nombre del fallo: WebAuthn distingue entre
+      // «esa llave ya la tienes» y «no ha podido ser».
+      nombreError: error instanceof ErrorLlave ? error.nombre : undefined
+    }
   }
 }
 
@@ -151,6 +160,22 @@ async function responder(p: Peticion, piezas: Piezas): Promise<unknown> {
     return null
   }
   if (p.tipo === 'abrirApp') return null
+  // Las llaves de una web se pueden preguntar con la caja cerrada: hace falta
+  // saber que está bloqueada para ofrecer abrirla en el aviso de la página.
+  if (p.tipo === 'llaves') {
+    const a = piezas.ajustes()
+    const sesion = piezas.estado()
+    // El dominio se comprueba también con la caja cerrada: así el aviso que sale
+    // en la página no puede enseñar el nombre de una web que no es la suya.
+    rpIdDe(p.origen, p.rpId)
+    return {
+      sesion,
+      hello: sesion === 'bloqueada' && piezas.helloListo(),
+      tema: a.theme,
+      paleta: a.palette,
+      llaves: sesion === 'abierta' ? llavesParaWeb(piezas.caja(), p.origen, p.rpId) : []
+    } satisfies EstadoLlaves
+  }
   if (p.tipo === 'copiarTexto') return piezas.copiar(p.texto)
 
   // Todo lo demás, con la caja abierta.
@@ -180,5 +205,13 @@ async function responder(p: Peticion, piezas: Piezas): Promise<unknown> {
       caja.obtener(p.elementoId)
       piezas.abrirElemento(p.elementoId)
       return null
+    case 'llaveCrear': {
+      // La caja fuerte tiene un elemento nuevo, o uno con una llave nueva.
+      const r = crearLlave(caja, p)
+      piezas.alCambiar()
+      return r
+    }
+    case 'llaveFirmar':
+      return firmarLlave(caja, p)
   }
 }

@@ -36,7 +36,7 @@ export function dominioDe(texto: string): string {
  * y no «co.uk». La lista completa (la Public Suffix List) son diez mil líneas;
  * para las webs que se usan en España basta con estas.
  */
-const SUFIJOS_DOBLES = new Set([
+export const SUFIJOS_DOBLES = new Set([
   'co.uk', 'org.uk', 'ac.uk', 'gov.uk', 'com.es', 'nom.es', 'org.es', 'gob.es', 'edu.es',
   'com.ar', 'com.mx', 'com.br', 'com.co', 'com.pe', 'com.ve', 'com.uy', 'com.au', 'co.nz',
   'co.jp', 'co.kr', 'co.in', 'co.za', 'com.tr', 'com.cn', 'com.pt', 'com.pl'
