@@ -46,6 +46,7 @@ const IDS = GUIONES.map((g) => g.id)
 /** Deja los guiones como diga el permiso. Se llama al arrancar y al cambiarlo. */
 async function sincronizar(): Promise<void> {
   try {
+    if (!chrome.permissions) return
     const permiso = await chrome.permissions.contains({ origins: ORIGENES })
     const puestos = await chrome.scripting.getRegisteredContentScripts()
     const hay = IDS.every((id) => puestos.some((g) => g.id === id))
@@ -60,8 +61,10 @@ async function sincronizar(): Promise<void> {
   }
 }
 
-chrome.permissions.onAdded.addListener(() => void sincronizar())
-chrome.permissions.onRemoved.addListener(() => void sincronizar())
+// Con interrogación: si algún navegador no tuviera esto, el fondo se quedaría
+// muerto entero y la extensión dejaría de rellenar también las contraseñas.
+chrome.permissions?.onAdded.addListener(() => void sincronizar())
+chrome.permissions?.onRemoved.addListener(() => void sincronizar())
 chrome.runtime.onInstalled.addListener(() => void sincronizar())
 chrome.runtime.onStartup.addListener(() => void sincronizar())
 void sincronizar()
