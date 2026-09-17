@@ -265,6 +265,13 @@
   line-height: 1.35;
 }
 
+/* La llave de acceso: su web y su cuenta arriba, y debajo de dónde sale. */
+.campo-valor.llave {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+
 /* Las acciones de cada campo aparecen al pasar por encima: si estuvieran
    siempre, una ficha de ocho campos serían veinticuatro iconos. */
 .campo-acciones {

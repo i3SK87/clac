@@ -160,7 +160,7 @@ function CampoLlave({ campo }: { campo: Campo }): ReactNode {
     <div className="campo-lectura">
       <div className="rotulo">{campo.etiqueta}</div>
       <div className="campo-fila">
-        <div className="campo-valor">
+        <div className="campo-valor llave">
           <span className="truncate">{llave.usuario ? `${llave.rpId} · ${llave.usuario}` : llave.rpId}</span>
           <span className="small subtle">Creada {haceCuanto(llave.creada)}. La usa la extensión al entrar en la web.</span>
         </div>
