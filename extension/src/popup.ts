@@ -13,7 +13,8 @@
 import { colorDe, dominioBase, dominioDe, inicialDe } from '@shared/webs'
 import { generar, trocear, OPCIONES_POR_DEFECTO, type OpcionesGenerador } from '@shared/generador'
 import { NOMBRE_ANFITRION, type Credenciales, type ElementoNavegador, type EstadoNavegador, type Peticion, type Respuesta, type ResultadoGuardar } from '@shared/navegador'
-import { ICONOS } from './iconos.gen'
+import { ORIGENES } from './llave-comun'
+import { h, icono, type Hijo, type NombreIcono } from './dibujar'
 import { leerPagina, rellenarNueva, rellenarPagina, type Rellenado } from './pagina'
 
 /* ---------- El puente con CLAC ---------- */
@@ -67,29 +68,6 @@ function pedir<T>(peticion: SinId<Peticion>): Promise<T> {
     })
     puerto!.postMessage({ ...peticion, id })
   })
-}
-
-/* ---------- Dibujar ---------- */
-
-type Hijo = Node | string | null | false | undefined
-
-function h(etiqueta: string, atributos: Record<string, unknown> = {}, ...hijos: Hijo[]): HTMLElement {
-  const el = document.createElement(etiqueta)
-  for (const [k, v] of Object.entries(atributos)) {
-    if (v == null || v === false) continue
-    if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v as EventListener)
-    else if (k === 'className') el.className = String(v)
-    else el.setAttribute(k, v === true ? '' : String(v))
-  }
-  for (const hijo of hijos) if (hijo) el.append(hijo)
-  return el
-}
-
-/** Los dibujos de Lucide, ya en SVG desde la compilación: texto nuestro, no de la web. */
-function icono(nombre: keyof typeof ICONOS, tamano = 15): HTMLElement {
-  const s = h('span', { className: 'icono', 'aria-hidden': 'true' })
-  s.innerHTML = ICONOS[nombre].replace(/width="24" height="24"/, `width="${tamano}" height="${tamano}"`)
-  return s
 }
 
 // Hasta que CLAC diga su tema, el del sistema: si no llega a contestar, la
@@ -311,7 +289,7 @@ async function pintarAbierta(): Promise<void> {
     }
   })
 
-  pintar(buscador, avisos, lista, pie)
+  pintar(buscador, avisos, lista, pie, interruptorLlaves())
   buscador.focus()
   await cargar()
 }
@@ -385,7 +363,7 @@ function pintarLista(lista: HTMLElement, avisos: HTMLElement, consulta: string):
   lista.replaceChildren(...filas)
 }
 
-function boton(nombre: keyof typeof ICONOS, titulo: string, alPulsar: () => void): HTMLElement {
+function boton(nombre: NombreIcono, titulo: string, alPulsar: () => void): HTMLElement {
   return h(
     'button',
     {
@@ -592,3 +570,41 @@ function pintarGenerador(): void {
 }
 
 void empezar()
+
+/* ---------- Las llaves de acceso ---------- */
+
+/**
+ * El interruptor de las llaves de acceso.
+ *
+ * Viene apagado. Encenderlo pide permiso para entrar en las webs, y no hay otra
+ * manera: para ofrecer una llave cuando la página la pide hay que estar dentro
+ * de la página desde antes de que arranque. Apagarlo devuelve el permiso y
+ * quita los guiones, y CLAC vuelve a rellenar solo cuando pulsas el candado.
+ */
+function interruptorLlaves(): HTMLElement {
+  const casilla = h('input', { type: 'checkbox' }) as HTMLInputElement
+  const nota = h('small', {}, '')
+  const etiqueta = h(
+    'label',
+    { className: 'checkbox ext-llaves' },
+    casilla,
+    h('span', { className: 'checkbox-text' }, 'Ofrecer llaves de acceso en las webs', nota)
+  )
+  const contar = (puesto: boolean): void => {
+    casilla.checked = puesto
+    nota.textContent = puesto
+      ? 'CLAC contesta cuando una web pide una llave. Las pestañas que ya tuvieras abiertas, recárgalas.'
+      : 'Hay que dejar a la extensión entrar en las webs.'
+  }
+  void chrome.permissions.contains({ origins: ORIGENES }).then(contar)
+  casilla.addEventListener('change', () => {
+    const encender = casilla.checked
+    const gestion = encender ? chrome.permissions.request({ origins: ORIGENES }) : chrome.permissions.remove({ origins: ORIGENES }).then((quitado) => !quitado)
+    void gestion.then((puesto) => {
+      contar(puesto)
+      // Por si la ventanita sigue abierta: el fondo también se entera solo.
+      void chrome.runtime.sendMessage({ tipo: 'sincronizar' }).catch(() => undefined)
+    })
+  })
+  return etiqueta
+}

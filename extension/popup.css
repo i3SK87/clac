@@ -232,3 +232,10 @@ body {
 
 .ext-generada .cifra { color: var(--accent); }
 .ext-generada .simbolo { color: var(--series-expense); }
+
+/* El interruptor de las llaves de acceso, al pie de la ventana. */
+.ext-llaves {
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}

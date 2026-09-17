@@ -53,13 +53,24 @@ rmSync(destino, { recursive: true, force: true })
 mkdirSync(join(destino, 'iconos'), { recursive: true })
 
 // — El código —
+// El aviso de las llaves se dibuja dentro de la página, donde no se puede pedir
+// ningún archivo de la extensión: el icono viaja metido en el propio guion.
+const iconoIncrustado = png(dibujar('clac', 32), 32).toString('base64')
+
 await build({
-  entryPoints: [join(origen, 'src', 'popup.ts')],
+  entryPoints: [
+    join(origen, 'src', 'popup.ts'),
+    join(origen, 'src', 'fondo.ts'),
+    join(origen, 'src', 'llave-pagina.ts'),
+    join(origen, 'src', 'llave-aviso.ts')
+  ],
   bundle: true,
   format: 'iife',
   target: 'chrome120',
-  outfile: join(destino, 'popup.js'),
+  outdir: destino,
+  entryNames: '[name]',
   alias: { '@shared': join(raiz, 'src', 'shared') },
+  define: { __ICONO_CLAC__: JSON.stringify(iconoIncrustado) },
   // Sin minificar: las funciones que se inyectan en la página viajan como texto,
   // y así se pueden leer tal cual en las herramientas de desarrollo.
   minify: false,
@@ -80,6 +91,16 @@ writeFileSync(
 // — Lo que va tal cual —
 copyFileSync(join(origen, 'manifest.json'), join(destino, 'manifest.json'))
 copyFileSync(join(origen, 'popup.html'), join(destino, 'popup.html'))
+
+// — La hoja del aviso de las llaves: la de la casa, pero para el «shadow root» —
+writeFileSync(
+  join(destino, 'llave.css'),
+  [
+    readFileSync(join(casa, 'estilos', 'paletas.css'), 'utf8').replaceAll(':root', '.aviso'),
+    readFileSync(join(casa, 'estilos', 'base.css'), 'utf8').replaceAll(':root', '.aviso'),
+    readFileSync(join(origen, 'llave.css'), 'utf8')
+  ].join('\n')
+)
 
 // — Los iconos de la barra —
 for (const lado of [16, 32, 48, 128]) {

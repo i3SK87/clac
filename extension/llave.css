@@ -1,0 +1,132 @@
+/* ============================================================
+   El aviso de las llaves de acceso, dentro de la página.
+
+   Encima van `casa/paletas.css` y `casa/base.css` con `:root`
+   cambiado por `.aviso`, que es la caja del aviso: los mismos
+   tonos y los mismos botones que en CLAC, pero dentro de un
+   «shadow root» cerrado, donde la web no llega.
+   ============================================================ */
+
+.aviso {
+  width: 320px;
+  max-width: calc(100vw - 28px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: left;
+  overflow: hidden;
+  box-shadow: 0 18px 44px rgb(0 0 0 / 0.3);
+  user-select: none;
+}
+
+.aviso-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--sidebar-bg);
+  color: #fff;
+  font-size: 13px;
+}
+
+.aviso-cabecera img { border-radius: 5px; }
+
+.aviso-web {
+  margin-left: auto;
+  max-width: 165px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sidebar-fg);
+  font-size: 11.5px;
+}
+
+.aviso-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+}
+
+.aviso-h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 650;
+}
+
+.aviso-texto { margin: 0; }
+
+.aviso-nota {
+  margin: 0;
+  color: var(--fg-subtle);
+  font-size: 11.5px;
+}
+
+.aviso-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.aviso-botones .btn { padding: 7px 12px; font-size: 13px; }
+
+.aviso-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.aviso-fila {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aviso-fila:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.aviso-textos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.aviso-titulo {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aviso-sub {
+  color: var(--fg-subtle);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icono {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}

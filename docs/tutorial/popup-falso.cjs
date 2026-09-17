@@ -40,6 +40,7 @@ const port = {
 window.chrome = {
   runtime: { lastError: undefined, connectNative: () => port },
   tabs: { query: async () => [{ id: 1, url: 'https://mail.google.com/mail/u/0/' }] },
+  permissions: { contains: async () => false, request: async () => false, remove: async () => true },
   scripting: { executeScript: async () => [{ result: { usuario: true, contrasena: true, codigo: false } }] }
 }
 
