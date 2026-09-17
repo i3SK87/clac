@@ -45,6 +45,8 @@ te la robara.
   huella o la cara. La contraseña maestra, al abrir CLAC y cada catorce días.
 - **Historial**: las 20 últimas versiones de cada elemento, para volver atrás.
 - **Códigos de un solo uso** (los de Google Authenticator), con su cuenta atrás.
+- **Llaves de acceso** (las «passkeys»), las que sustituyen a la contraseña: se
+  crean y se usan desde la extensión y se guardan cifradas con todo lo demás.
 - **Archivos adjuntos** cifrados, de hasta 50 MB cada uno.
 - **Generador**: aleatoria, memorable (palabras en castellano) o PIN, con los
   bits de azar que lleva de verdad.
@@ -80,11 +82,31 @@ Cómo se instala:
    descomprimida la carpeta que te indica CLAC (dentro de la instalación, en
    `resources\extension`).
 
-Por dentro: la extensión solo pide tres permisos —la pestaña en la que la pulsas,
-escribir en ella y hablar con CLAC—; nada de «leer y cambiar todas tus webs». No
-guarda nada: cada vez pregunta a CLAC, por la mensajería nativa de Chromium, a
-través de un puente pequeño que es el propio `CLAC.exe` en modo Node. Solo rellena
-cuando la pulsas, y nunca envía el formulario por ti.
+### Llaves de acceso
+
+La extensión también sabe **crear y usar llaves de acceso** (las «passkeys»):
+cuando una web te deja entrar sin contraseña, CLAC se ofrece a guardar la llave
+en tu caja fuerte y, la próxima vez, firma con ella. La clave privada no sale
+nunca de CLAC —la extensión solo ve lo ya firmado— y la firma lleva dentro el
+dominio para el que se hizo, así que en una web falsa no vale de nada.
+
+Viene **apagado**. Se enciende en el candado, en «Ofrecer llaves de acceso en las
+webs», y ahí el navegador pide permiso para que la extensión entre en todas las
+webs: es lo que hace falta para poder contestar cuando una web pida una llave,
+porque hay que estar en la página desde antes de que arranque. Al apagarlo se
+devuelve el permiso y la extensión vuelve a hacer algo solo cuando la pulsas.
+
+Cada llave se guarda dentro del inicio de sesión de esa web, como un campo más
+que no se teclea ni se copia. Si prefieres la llave del propio ordenador o la del
+móvil, «Usar otra llave» deja que siga el navegador con lo de siempre; y de las
+webs de las que no tengas llave en CLAC, ni te interrumpe.
+
+Por dentro: la extensión pide tres permisos —la pestaña en la que la pulsas,
+escribir en ella y hablar con CLAC— y un cuarto, el de entrar en todas las webs,
+que está apagado y solo se pide si enciendes las llaves de acceso. No guarda
+nada: cada vez pregunta a CLAC, por la mensajería nativa de Chromium, a través de
+un puente pequeño que es el propio `CLAC.exe` en modo Node. Rellena solo cuando
+la pulsas, y nunca envía el formulario por ti.
 
 En la puerta del canal hay un portero (`src/main/navegador/portero.ts`): Windows
 le dice qué proceso se ha conectado, y solo deja pasar al `CLAC.exe` de la

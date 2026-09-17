@@ -473,7 +473,8 @@ function TarjetaNavegador(): ReactNode {
               {info.ultimaConexion
                 ? `La extensión habló con CLAC por última vez ${haceCuanto(info.ultimaConexion)}.`
                 : 'La extensión todavía no ha hablado con CLAC desde que se abrió.'}{' '}
-              Solo rellena cuando pulsas en ella, y avisa si la web no es la del elemento.
+              Rellena solo cuando pulsas en ella, y avisa si la web no es la del elemento. Las llaves de acceso se encienden
+              aparte, en el propio candado.
             </p>
           </>
         )}

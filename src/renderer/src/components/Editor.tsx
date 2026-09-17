@@ -16,6 +16,7 @@ import { Eye, EyeOff, KeyRound, Plus, Trash2, WandSparkles, X } from 'lucide-rea
 import { Confirm, useAvisos } from 'casa/ui'
 import { categoria, nuevoId, seccionesDePlantilla } from '@shared/categorias'
 import { fortaleza } from '@shared/fortaleza'
+import { leerLlave } from '@shared/llaves'
 import { leerTotp } from '@shared/totp'
 import { finDeValidez } from '@shared/fechas'
 import type { Campo, CategoriaId, Elemento, ElementoEntrada, Seccion, TipoCampo } from '@shared/tipos'
@@ -46,7 +47,8 @@ const ETIQUETA_TIPO: Record<TipoCampo, string> = {
   fecha: 'Fecha',
   mesAnio: 'Mes y año',
   multilinea: 'Nota',
-  ocultoMultilinea: 'Texto oculto'
+  ocultoMultilinea: 'Texto oculto',
+  llave: 'Llave de acceso'
 }
 
 /** Pasa lo importado («12/27») al formato de los controles de fecha, si se entiende. */
@@ -349,6 +351,23 @@ function CampoEditor({
 }): ReactNode {
   const [ver, setVer] = useState(campo.valor === '')
   const [generando, setGenerando] = useState(false)
+  // La llave de acceso no se escribe a mano: solo se puede quitar, que es lo que
+  // hace falta cuando se borra de la web.
+  const llave = campo.tipo === 'llave' ? leerLlave(campo.valor) : null
+  if (campo.tipo === 'llave') {
+    return (
+      <div className="campo-editor">
+        <div className="rotulo">{campo.etiqueta}</div>
+        <div className="editor-fila">
+          <span className="campo-valor truncate">{llave ? (llave.usuario ? `${llave.rpId} · ${llave.usuario}` : llave.rpId) : 'Llave de acceso'}</span>
+          <button type="button" className="btn ghost icon small" onClick={alQuitar} title="Quitar la llave" aria-label="Quitar la llave">
+            <Trash2 size={15} />
+          </button>
+        </div>
+        <span className="small subtle">Si la quitas, esa web dejará de dejarte entrar con ella.</span>
+      </div>
+    )
+  }
   const oculto = campo.tipo === 'oculto'
   const esFecha = campo.tipo === 'fecha' && (/^\d{4}-\d{2}-\d{2}$/.test(campo.valor) || campo.valor === '')
   const esMes = campo.tipo === 'mesAnio' && (/^\d{4}-\d{2}$/.test(campo.valor) || campo.valor === '')

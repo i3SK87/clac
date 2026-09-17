@@ -57,8 +57,10 @@ export function exportarCsv(elementos: ParaRevisar[], bovedas: Boveda[]): string
     const esLogin = e.categoria === 'login' || e.categoria === 'contrasena' || !!usuario || !!contrasena
     // Lo que no es usuario, contraseña ni código va como campo personalizado:
     // «nombre: valor», uno por línea, que es lo que entiende Bitwarden.
+    // Las llaves de acceso no salen en el CSV: ningún otro gestor sabría qué
+    // hacer con ellas. En el JSON de CLAC sí van, que es la copia de emergencia.
     const resto = todosLosCampos(detalle)
-      .filter((c) => c.valor.trim() && c.clave !== 'usuario' && c.clave !== 'contrasena' && c.tipo !== 'totp')
+      .filter((c) => c.valor.trim() && c.clave !== 'usuario' && c.clave !== 'contrasena' && c.tipo !== 'totp' && c.tipo !== 'llave')
       .map((c) => `${c.etiqueta}: ${c.valor.replace(/\r?\n/g, ' ')}`)
     const tipoNoLogin = e.categoria === 'nota' ? '' : `Tipo: ${categoria(e.categoria).nombre}`
     filas.push([

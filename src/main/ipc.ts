@@ -331,6 +331,7 @@ export function registrarIpc(entorno: Entorno): void {
     const e = laCaja().obtener(elementoId)
     const campo = todosLosCampos(e).find((c) => c.id === campoId)
     if (!campo) throw new Error('Ese campo ya no existe.')
+    if (campo.tipo === 'llave') throw new Error('Una llave de acceso no se copia: la usa la extensión al entrar en la web.')
     let texto = campo.valor
     if (campo.tipo === 'totp') {
       const cfg = leerTotp(campo.valor)

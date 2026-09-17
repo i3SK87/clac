@@ -34,6 +34,7 @@ import { MenuContextual, type OpcionMenu } from 'casa/menu'
 import { categoria } from '@shared/categorias'
 import { dominioDe, normalizarWeb } from '@shared/webs'
 import { fortaleza } from '@shared/fortaleza'
+import { leerLlave } from '@shared/llaves'
 import { haceCuanto, mostrarFecha } from '@shared/fechas'
 import type { Campo, Elemento, ResultadoCopia, VersionHistorial } from '@shared/tipos'
 import { api, useStore } from '../lib/store'
@@ -144,6 +145,26 @@ function CampoLectura({
       {esContrasena && campo.clave === 'contrasena' && campo.valor && <Medidor fortaleza={fortaleza(campo.valor)} />}
       {grande && <EnGrande valor={campo.valor} alCerrar={() => setGrande(false)} />}
       {menu && <MenuContextual x={menu.x} y={menu.y} opciones={opciones} onCerrar={() => setMenu(null)} />}
+    </div>
+  )
+}
+
+/**
+ * Una llave de acceso. Se enseña, pero no se copia ni se revela: la clave
+ * privada no sirve de nada fuera de CLAC, y quien la use es la extensión.
+ */
+function CampoLlave({ campo }: { campo: Campo }): ReactNode {
+  const llave = leerLlave(campo.valor)
+  if (!llave) return null
+  return (
+    <div className="campo-lectura">
+      <div className="rotulo">{campo.etiqueta}</div>
+      <div className="campo-fila">
+        <div className="campo-valor">
+          <span className="truncate">{llave.usuario ? `${llave.rpId} · ${llave.usuario}` : llave.rpId}</span>
+          <span className="small subtle">Creada {haceCuanto(llave.creada)}. La usa la extensión al entrar en la web.</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -276,9 +297,13 @@ export function Detalle({ id, alEditar }: { id: string; alEditar: () => void }):
             {s.titulo && <div className="detalle-seccion-titulo">{s.titulo}</div>}
             {s.campos
               .filter((c) => c.valor.trim() !== '')
-              .map((c) => (
-                <CampoLectura key={c.id} campo={c} revelarTodo={revelarTodo} alCopiar={(campo) => void copiarCampo(campo)} />
-              ))}
+              .map((c) =>
+                c.tipo === 'llave' ? (
+                  <CampoLlave key={c.id} campo={c} />
+                ) : (
+                  <CampoLectura key={c.id} campo={c} revelarTodo={revelarTodo} alCopiar={(campo) => void copiarCampo(campo)} />
+                )
+              )}
           </section>
         ))}
 
