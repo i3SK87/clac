@@ -143,33 +143,33 @@ export function Caja(): ReactNode {
   const opcionesDe = (e: Elemento): OpcionMenu[] => {
     if (e.estado === 'eliminado') {
       return [
-        { etiqueta: 'Recuperar', icono: RotateCcw, onElegir: () => cambiarEstado(e.id, 'activo', 'Elemento recuperado') },
-        { etiqueta: 'Borrar para siempre…', icono: Trash2, peligrosa: true, onElegir: () => setBorrando(e) }
+        { etiqueta: 'Recuperar', icono: <RotateCcw size={15} />, onElegir: () => cambiarEstado(e.id, 'activo', 'Elemento recuperado') },
+        { etiqueta: 'Borrar para siempre…', icono: <Trash2 size={15} />, peligrosa: true, onElegir: () => setBorrando(e) }
       ]
     }
     const web = e.webs.find((w) => normalizarWeb(w))
     return [
-      ...(usuarioDe(e) ? [{ etiqueta: 'Copiar el usuario', icono: User, pista: 'Ctrl+C', onElegir: () => copiarRapido(e.id, 'usuario') }] : []),
-      ...(contrasenaDe(e) ? [{ etiqueta: 'Copiar la contraseña', icono: KeyRound, pista: 'Ctrl+Mayús+C', onElegir: () => copiarRapido(e.id, 'contrasena') }] : []),
-      ...(e.tieneTotp ? [{ etiqueta: 'Copiar el código', icono: Clock, pista: 'Ctrl+Alt+C', onElegir: () => copiarRapido(e.id, 'totp') }] : []),
-      ...(web ? [{ etiqueta: 'Abrir la web', icono: ExternalLink, onElegir: () => void run(() => api.web.abrir(web)) }] : []),
+      ...(usuarioDe(e) ? [{ etiqueta: 'Copiar el usuario', icono: <User size={15} />, pista: 'Ctrl+C', onElegir: () => copiarRapido(e.id, 'usuario') }] : []),
+      ...(contrasenaDe(e) ? [{ etiqueta: 'Copiar la contraseña', icono: <KeyRound size={15} />, pista: 'Ctrl+Mayús+C', onElegir: () => copiarRapido(e.id, 'contrasena') }] : []),
+      ...(e.tieneTotp ? [{ etiqueta: 'Copiar el código', icono: <Clock size={15} />, pista: 'Ctrl+Alt+C', onElegir: () => copiarRapido(e.id, 'totp') }] : []),
+      ...(web ? [{ etiqueta: 'Abrir la web', icono: <ExternalLink size={15} />, onElegir: () => void run(() => api.web.abrir(web)) }] : []),
       {
         etiqueta: 'Editar',
-        icono: Pencil,
+        icono: <Pencil size={15} />,
         pista: 'Ctrl+E',
         onElegir: () => {
           seleccionar(e.id)
           setEditando(e)
         }
       },
-      { etiqueta: 'Duplicar', icono: CopyPlus, onElegir: () => void run(() => api.elementos.duplicar(e.id)).then((c) => c && seleccionar(c.id)) },
-      ...(bovedas.length > 1 ? [{ etiqueta: 'Mover a otra caja fuerte…', icono: FolderInput, onElegir: () => setMoviendo(e) }] : []),
+      { etiqueta: 'Duplicar', icono: <CopyPlus size={15} />, onElegir: () => void run(() => api.elementos.duplicar(e.id)).then((c) => c && seleccionar(c.id)) },
+      ...(bovedas.length > 1 ? [{ etiqueta: 'Mover a otra caja fuerte…', icono: <FolderInput size={15} />, onElegir: () => setMoviendo(e) }] : []),
       e.estado === 'archivado'
-        ? { etiqueta: 'Sacar del archivo', icono: ArchiveRestore, onElegir: () => cambiarEstado(e.id, 'activo', 'Vuelve a estar con los demás') }
-        : { etiqueta: 'Archivar', icono: Archive, pista: 'Supr', onElegir: () => cambiarEstado(e.id, 'archivado', 'Archivado. Lo tienes en «Archivo».') },
+        ? { etiqueta: 'Sacar del archivo', icono: <ArchiveRestore size={15} />, onElegir: () => cambiarEstado(e.id, 'activo', 'Vuelve a estar con los demás') }
+        : { etiqueta: 'Archivar', icono: <Archive size={15} />, pista: 'Supr', onElegir: () => cambiarEstado(e.id, 'archivado', 'Archivado. Lo tienes en «Archivo».') },
       {
         etiqueta: 'Mover a la papelera',
-        icono: Trash2,
+        icono: <Trash2 size={15} />,
         pista: 'Ctrl+Supr',
         peligrosa: true,
         onElegir: () => cambiarEstado(e.id, 'eliminado', 'A la papelera. Se borrará solo dentro de 30 días.')
@@ -178,14 +178,14 @@ export function Caja(): ReactNode {
   }
 
   const vacia = busqueda.trim() ? (
-    <EmptyState icon={SearchX} title="Nada coincide" message={`No hay nada que se llame «${busqueda}» aquí.`} />
+    <EmptyState icono={<SearchX size={24} strokeWidth={1.8} />} title="Nada coincide" message={`No hay nada que se llame «${busqueda}» aquí.`} />
   ) : vista.tipo === 'archivo' ? (
-    <EmptyState icon={Archive} title="El archivo está vacío" message="Lo que archives sale de las listas y del acceso rápido, pero se queda aquí." />
+    <EmptyState icono={<Archive size={24} strokeWidth={1.8} />} title="El archivo está vacío" message="Lo que archives sale de las listas y del acceso rápido, pero se queda aquí." />
   ) : vista.tipo === 'papelera' ? (
-    <EmptyState icon={Trash2} title="La papelera está vacía" message="Lo que se borra se queda aquí treinta días antes de irse del todo." />
+    <EmptyState icono={<Trash2 size={24} strokeWidth={1.8} />} title="La papelera está vacía" message="Lo que se borra se queda aquí treinta días antes de irse del todo." />
   ) : (
     <EmptyState
-      icon={KeyRound}
+      icono={<KeyRound size={24} strokeWidth={1.8} />}
       title="Todavía no hay nada"
       message="Crea tu primer elemento o tráete las contraseñas del navegador desde Ajustes ▸ Importar."
       action={

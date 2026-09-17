@@ -91,10 +91,10 @@ function CampoLectura({
 
   const web = campo.tipo === 'url' && normalizarWeb(campo.valor)
   const opciones: OpcionMenu[] = [
-    { etiqueta: campo.tipo === 'totp' ? 'Copiar el código' : 'Copiar', icono: Copy, onElegir: () => alCopiar(campo) },
-    ...(oculto ? [{ etiqueta: visible ? 'Ocultar' : 'Mostrar', icono: visible ? EyeOff : Eye, onElegir: () => setRevelado(!visible) }] : []),
-    ...(campo.tipo === 'oculto' ? [{ etiqueta: 'Ver en grande', icono: Maximize2, onElegir: () => setGrande(true) }] : []),
-    ...(web ? [{ etiqueta: 'Abrir en el navegador', icono: ExternalLink, onElegir: () => void api.web.abrir(campo.valor) }] : [])
+    { etiqueta: campo.tipo === 'totp' ? 'Copiar el código' : 'Copiar', icono: <Copy size={15} />, onElegir: () => alCopiar(campo) },
+    ...(oculto ? [{ etiqueta: visible ? 'Ocultar' : 'Mostrar', icono: visible ? <EyeOff size={15} /> : <Eye size={15} />, onElegir: () => setRevelado(!visible) }] : []),
+    ...(campo.tipo === 'oculto' ? [{ etiqueta: 'Ver en grande', icono: <Maximize2 size={15} />, onElegir: () => setGrande(true) }] : []),
+    ...(web ? [{ etiqueta: 'Abrir en el navegador', icono: <ExternalLink size={15} />, onElegir: () => void api.web.abrir(campo.valor) }] : [])
   ]
 
   return (

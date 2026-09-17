@@ -162,10 +162,10 @@ export function BarraLateral(): ReactNode {
           y={menu.y}
           onCerrar={cerrarMenu}
           opciones={[
-            { etiqueta: 'Editar…', icono: Pencil, onElegir: () => setEditandoBoveda(menu.de) },
-            { etiqueta: 'Nueva caja fuerte…', icono: Plus, onElegir: () => setEditandoBoveda('nueva') },
+            { etiqueta: 'Editar…', icono: <Pencil size={15} />, onElegir: () => setEditandoBoveda(menu.de) },
+            { etiqueta: 'Nueva caja fuerte…', icono: <Plus size={15} />, onElegir: () => setEditandoBoveda('nueva') },
             ...(bovedas.length > 1
-              ? [{ etiqueta: 'Eliminar…', icono: Trash2, peligrosa: true, onElegir: () => setBorrandoBoveda(menu.de) }]
+              ? [{ etiqueta: 'Eliminar…', icono: <Trash2 size={15} />, peligrosa: true, onElegir: () => setBorrandoBoveda(menu.de) }]
               : [])
           ]}
         />
