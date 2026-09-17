@@ -67,16 +67,50 @@ export function llavesDe(detalle: Pick<Detalle, 'secciones'>): Array<{ campo: Ca
 /* ---------- El dominio de la llave ---------- */
 
 /**
- * Sufijos donde cualquiera puede abrir su sitio: dos páginas de «github.io» son
- * de dos personas distintas, así que ahí no vale hacer una llave para todo
- * «github.io». La lista de verdad (la Public Suffix List) son diez mil líneas;
- * con estos y los de `webs.ts` se cubre lo que se usa.
+ * Los sufijos donde cualquiera puede abrir su sitio: dos páginas de «github.io»
+ * son de dos personas distintas, y una llave hecha para todo «github.io» valdría
+ * en la web del vecino. Los navegadores lo miran en la Public Suffix List, que
+ * son diez mil líneas que además cambian cada mes. Aquí no se trae: se usan dos
+ * tablas cortas y una regla, y en la duda se dice que no.
+ *
+ * Decir que no de más no rompe nada: esa web se queda con la llave del propio
+ * ordenador o la del móvil, que es lo que pasaría si CLAC no estuviera. Decir
+ * que sí de más sí importa, y por eso la regla es ancha.
  */
+
+/** Donde el sufijo es de una empresa: alojamientos donde cada cual tiene su página. */
 const SUFIJOS_PROPIOS = new Set([
-  'github.io', 'gitlab.io', 'pages.dev', 'workers.dev', 'vercel.app', 'netlify.app', 'web.app',
-  'firebaseapp.com', 'appspot.com', 'herokuapp.com', 'onrender.com', 'blogspot.com', 'wordpress.com',
-  'azurewebsites.net', 'glitch.me', 'surge.sh', 'neocities.org', 'repl.co', 'ngrok.io', 'ngrok-free.app'
+  'github.io', 'gitlab.io', 'js.org', 'eu.org', 'sourceforge.io', 'readthedocs.io',
+  'pages.dev', 'workers.dev', 'trycloudflare.com', 'vercel.app', 'netlify.app', 'now.sh',
+  'web.app', 'firebaseapp.com', 'appspot.com', 'herokuapp.com', 'onrender.com', 'fly.dev',
+  'glitch.me', 'repl.co', 'replit.dev', 'surge.sh', 'neocities.org', 'wixsite.com',
+  'blogspot.com', 'wordpress.com', 'azurewebsites.net', 'cloudfront.net', 's3.amazonaws.com',
+  'ngrok.io', 'ngrok-free.app', 'uk.com', 'us.com', 'eu.com'
 ])
+
+/**
+ * Los primeros trozos de los sufijos de dos piezas de cada país: «com.ar»,
+ * «co.uk», «ne.jp», «or.kr», «gov.br»… Con la regla de abajo valen para todos
+ * los países a la vez, sin escribir la lista entera.
+ *
+ * No están los que también son dominios de verdad de alguien —«web.de» es un
+ * correo alemán, no un sufijo—, que es justo lo que no hay que rechazar.
+ */
+const SEGUNDOS_DE_PAIS = new Set([
+  'com', 'co', 'net', 'org', 'edu', 'gov', 'gob', 'gouv', 'gv', 'ac', 'or', 'ne', 'go',
+  'mil', 'int', 'nom', 'sch', 'k12', 'lg', 'in', 'id', 'asso', 'priv', 'tm', 'firm', 'gen', 'ind', 'res'
+])
+
+/** Si ahí dentro puede poner su web cualquiera, y entonces no vale para una llave. */
+function esSufijoPublico(dominio: string): boolean {
+  const partes = dominio.split('.')
+  // Un solo trozo: «es», «com», «app».
+  if (partes.length < 2) return true
+  if (SUFIJOS_PROPIOS.has(dominio) || SUFIJOS_DOBLES.has(dominio)) return true
+  // Dos trozos, el último de dos letras —un país— y el primero de los de arriba:
+  // «com.my», «co.th», «ne.jp». Así no hace falta tener apuntados los doscientos.
+  return partes.length === 2 && partes[1].length === 2 && SEGUNDOS_DE_PAIS.has(partes[0])
+}
 
 export class ErrorLlave extends Error {
   /** El nombre que espera la web: lo que se convierte en un DOMException. */
@@ -118,7 +152,7 @@ export function rpIdDe(origen: string, rpId?: string): string {
   if (pedido !== host && !host.endsWith(`.${pedido}`)) {
     throw new ErrorLlave('SecurityError', `Esta web es ${host} y pide una llave de ${pedido}.`)
   }
-  if (pedido !== 'localhost' && (!pedido.includes('.') || SUFIJOS_DOBLES.has(pedido) || SUFIJOS_PROPIOS.has(pedido))) {
+  if (pedido !== 'localhost' && esSufijoPublico(pedido)) {
     throw new ErrorLlave('SecurityError', `«${pedido}» no es un dominio para el que se pueda hacer una llave.`)
   }
   return pedido

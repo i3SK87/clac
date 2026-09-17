@@ -837,8 +837,23 @@ async function main(): Promise<void> {
     equal('un subdominio puede pedir el dominio de arriba', rpIdDe('https://gist.github.com', 'github.com'), 'github.com')
     throws('pero no al revés', () => rpIdDe('https://github.com', 'gist.github.com'), /pide una llave/)
     throws('ni el de otra web', () => rpIdDe('https://acceso-seguro.com', 'santander.es'), /pide una llave/)
+    // Los sufijos públicos: donde cualquiera abre su web, y por eso una llave
+    // hecha para todo el sufijo valdría en la del vecino.
     throws('ni un sufijo público', () => rpIdDe('https://tienda.ejemplo.co.uk', 'co.uk'), /no es un dominio/)
+    throws('ni el de otro país', () => rpIdDe('https://tienda.ejemplo.com.ar', 'com.ar'), /no es un dominio/)
+    throws('ni uno de país que no esté apuntado', () => rpIdDe('https://tienda.com.my', 'com.my'), /no es un dominio/)
+    throws('ni los japoneses', () => rpIdDe('https://algo.ne.jp', 'ne.jp'), /no es un dominio/)
+    throws('ni los coreanos', () => rpIdDe('https://algo.or.kr', 'or.kr'), /no es un dominio/)
+    throws('ni los tailandeses', () => rpIdDe('https://algo.co.th', 'co.th'), /no es un dominio/)
+    throws('ni «gov.br»', () => rpIdDe('https://algo.gov.br', 'gov.br'), /no es un dominio/)
     throws('ni uno donde cualquiera abre su sitio', () => rpIdDe('https://ana.github.io', 'github.io'), /no es un dominio/)
+    throws('ni los alojamientos de páginas', () => rpIdDe('https://ana.pages.dev', 'pages.dev'), /no es un dominio/)
+    throws('ni un dominio de un solo trozo', () => rpIdDe('https://ejemplo.es', 'es'), /no es un dominio/)
+    // Y lo que sí es de alguien, aunque lo parezca.
+    equal('el dominio de verdad bajo un sufijo doble, sí', rpIdDe('https://tienda.ejemplo.co.uk', 'ejemplo.co.uk'), 'ejemplo.co.uk')
+    equal('y la página de uno en un alojamiento compartido', rpIdDe('https://ana.github.io'), 'ana.github.io')
+    equal('un correo alemán no es un sufijo', rpIdDe('https://buzon.web.de', 'web.de'), 'web.de')
+    equal('ni una web de tres piezas de país', rpIdDe('https://tienda.ejemplo.com.my', 'ejemplo.com.my'), 'ejemplo.com.my')
     throws('ni una web sin cifrar', () => rpIdDe('http://ejemplo.es'), /https/)
     throws('ni una dirección IP', () => rpIdDe('https://192.168.1.10'), /dominio/)
     equal('en local sí, para probar', rpIdDe('http://localhost:8080'), 'localhost')
