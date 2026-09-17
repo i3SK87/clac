@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tienda de prueba</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 40px; background: #f4f5f8; color: #16181d; }
+      h1 { font-size: 22px; }
+      p { max-width: 40em; line-height: 1.5; }
+      .caja { background: #fff; border: 1px solid #dfe2e8; border-radius: 12px; padding: 18px; max-width: 34em; }
+    </style>
+  </head>
+  <body>
+    <h1>Tienda de prueba</h1>
+    <div class="caja">
+      <p>Esta página no es de nadie: solo sirve para comprobar que las llaves de acceso de CLAC se crean, se firman y las acepta un servidor que las verifica por su cuenta.</p>
+      <p id="estado">Lista.</p>
+    </div>
+    <script>
+      const RETOS = {}
+
+      function aB64u(buffer) {
+        const bytes = new Uint8Array(buffer)
+        let texto = ''
+        for (const b of bytes) texto += String.fromCharCode(b)
+        return btoa(texto).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+      }
+
+      function deB64u(texto) {
+        const bruto = atob(texto.replace(/-/g, '+').replace(/_/g, '/'))
+        const bytes = new Uint8Array(bruto.length)
+        for (let i = 0; i < bruto.length; i++) bytes[i] = bruto.charCodeAt(i)
+        return bytes
+      }
+
+      async function servidor(ruta, cuerpo) {
+        const opciones = cuerpo ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) } : undefined
+        const r = await fetch(ruta, opciones)
+        return r.json()
+      }
+
+      function opcionesCrear(reto, usuario, excluir) {
+        return {
+          rp: { id: location.hostname, name: 'Tienda de prueba' },
+          user: { id: deB64u(usuario === 'ana-dev' ? 'AQIDBA' : 'CQkJCQ'), name: usuario, displayName: 'Ana García' },
+          challenge: deB64u(reto),
+          pubKeyCredParams: [
+            { type: 'public-key', alg: -7 },
+            { type: 'public-key', alg: -257 }
+          ],
+          authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
+          excludeCredentials: (excluir || []).map((id) => ({ type: 'public-key', id: deB64u(id), transports: ['internal'] })),
+          extensions: { credProps: true },
+          attestation: 'none',
+          timeout: 60000
+        }
+      }
+
+      window.registrar = async (usuario, excluir) => {
+        const { reto } = await servidor('/reto')
+        const cred = await navigator.credentials.create({ publicKey: opcionesCrear(reto, usuario || 'ana-dev', excluir) })
+        const comprobaciones = {
+          esCredencial: cred instanceof PublicKeyCredential,
+          esAtestacion: cred.response instanceof AuthenticatorAttestationResponse,
+          rawIdEsBuffer: cred.rawId instanceof ArrayBuffer,
+          tipo: cred.type,
+          enganche: cred.authenticatorAttachment,
+          transportes: cred.response.getTransports(),
+          algoritmo: cred.response.getPublicKeyAlgorithm(),
+          publicaSuelta: cred.response.getPublicKey() instanceof ArrayBuffer,
+          datosSueltos: cred.response.getAuthenticatorData() instanceof ArrayBuffer,
+          extensiones: cred.getClientExtensionResults(),
+          conToJSON: typeof cred.toJSON === 'function' && cred.toJSON().id === cred.id
+        }
+        const r = await servidor('/registrar', {
+          id: cred.id,
+          rawId: aB64u(cred.rawId),
+          clientDataJSON: aB64u(cred.response.clientDataJSON),
+          attestationObject: aB64u(cred.response.attestationObject)
+        })
+        return { ...r, comprobaciones }
+      }
+
+      window.entrar = async (permitidas) => {
+        const { reto } = await servidor('/reto')
+        const cred = await navigator.credentials.get({
+          publicKey: {
+            challenge: deB64u(reto),
+            rpId: location.hostname,
+            allowCredentials: (permitidas || []).map((id) => ({ type: 'public-key', id: deB64u(id), transports: ['internal'] })),
+            userVerification: 'preferred',
+            timeout: 60000
+          }
+        })
+        const r = await servidor('/entrar', {
+          id: cred.id,
+          clientDataJSON: aB64u(cred.response.clientDataJSON),
+          authenticatorData: aB64u(cred.response.authenticatorData),
+          firma: aB64u(cred.response.signature),
+          usuario: cred.response.userHandle ? aB64u(cred.response.userHandle) : null
+        })
+        return { ...r, esAsercion: cred.response instanceof AuthenticatorAssertionResponse }
+      }
+
+      window.entrarConAutorrelleno = async () => {
+        const { reto } = await servidor('/reto')
+        return navigator.credentials.get({ mediation: 'conditional', publicKey: { challenge: deB64u(reto), rpId: location.hostname } })
+      }
+
+      window.registrarAbortando = async () => {
+        const { reto } = await servidor('/reto')
+        const mando = new AbortController()
+        window.abortar = () => mando.abort()
+        return navigator.credentials.create({ publicKey: opcionesCrear(reto, 'ana-dev'), signal: mando.signal })
+      }
+
+      /** Todo lo de arriba, contando también cómo falla: es la mitad de la prueba. */
+      window.probar = async (nombre, ...argumentos) => {
+        try {
+          return { ok: true, valor: await window[nombre](...argumentos) }
+        } catch (e) {
+          return { ok: false, error: e.name, mensaje: e.message }
+        }
+      }
+
+      window.nativas = () => ({ ...window.nativasLlamadas })
+    </script>
+  </body>
+</html>
