@@ -19,6 +19,7 @@ import { OPCIONES_POR_DEFECTO, SIMBOLOS, generar, llana, trocear } from '../src/
 import { fortaleza } from '../src/shared/fortaleza'
 import { base32ABytes, bytesABase32, codigoTotp, formatearCodigo, hotp, leerTotp, segundosRestantes } from '../src/shared/totp'
 import { colorDe, dominioBase, dominioDe, esSinCifrar, inicialDe, normalizarWeb } from '../src/shared/webs'
+import { nombrePrograma } from '../src/shared/programas'
 import { finDeValidez, mostrarFecha } from '../src/shared/fechas'
 import { escribirCsv, leerCsv } from '../src/shared/csv'
 import { desde1pux, leerExportacion } from '../src/shared/importar'
@@ -260,6 +261,16 @@ async function main(): Promise<void> {
     equal('«15/08/2030» se entiende', finDeValidez('15/08/2030')?.getMonth(), 7)
     equal('se enseña como mes/año', mostrarFecha('2027-03', 'mesAnio'), '03/2027')
     equal('y la fecha en largo', mostrarFecha('2027-03-05', 'fecha'), '5 de marzo de 2027')
+  }
+
+  /* ================================================================ */
+  section('Auto-tecleo: nombre del programa')
+  {
+    equal('quita la carpeta y la extensión', nombrePrograma('C:\\Program Files\\Battle.net\\Battle.net.exe'), 'Battle.net')
+    equal('con barras normales también', nombrePrograma('/usr/bin/algo.exe'), 'algo')
+    equal('sin carpeta, igual', nombrePrograma('Steam.exe'), 'Steam')
+    equal('mayúsculas y minúsculas de la extensión', nombrePrograma('Juego.EXE'), 'Juego')
+    equal('sin ruta, cadena vacía', nombrePrograma(''), '')
   }
 
   /* ================================================================ */

@@ -38,6 +38,7 @@ import { tipoDeArchivo, CajaFuerte } from './boveda/boveda'
 import { contarCopias, copiarA } from './boveda/db'
 import { registrar, registrarFallo } from './registro'
 import { estadoHello, pedirHello } from './ayudante'
+import { teclear as escribirEnVentana } from './teclear'
 import { motivoHello } from './hello'
 import { buscarActualizacion, descargarActualizacion, estadoActualizacion, instalarActualizacion } from './actualizaciones'
 import { contrasenaDe, todosLosCampos, usuarioDe, totpDe } from '@shared/categorias'
@@ -374,6 +375,13 @@ export function registrarIpc(entorno: Entorno): void {
   handle('acceso:abrirPrincipal', () => {
     ocultarAcceso()
     entorno.mostrarPrincipal()
+  })
+  handle('acceso:teclear', async (id: string, conIntro: boolean) => {
+    const e = laCaja().obtener(id)
+    const contrasena = contrasenaDe(e)
+    if (!contrasena) throw new Error('Este elemento no tiene contraseña.')
+    await escribirEnVentana(usuarioDe(e), contrasena, conIntro)
+    laCaja().anotarUso(id)
   })
 
   /* ---------- Watchtower ---------- */

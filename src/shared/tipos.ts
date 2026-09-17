@@ -98,6 +98,9 @@ export interface ElementoLista extends Resumen {
   eliminadoEn: string | null
 }
 
+/** Lo que enseña el buscador flotante al abrirse: a buscar, o a teclear en la ventana que estaba delante. */
+export type AccesoMostrado = { modo: 'buscar' } | { modo: 'teclear'; titulo: string; exe: string }
+
 export interface AdjuntoInfo {
   id: string
   nombre: string
@@ -177,6 +180,8 @@ export interface Ajustes {
   /** Segundos hasta vaciar el portapapeles. 0: nunca. */
   portapapelesSegundos: number
   accesoRapido: boolean
+  /** Atajo global para teclear usuario y contraseña en la ventana de otro programa (ver main/teclear.ts). */
+  autoTeclear: boolean
   arrancarConWindows: boolean
   /** El aspa esconde en la bandeja: el acceso rápido necesita la aplicación viva. */
   cerrarABandeja: boolean

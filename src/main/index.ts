@@ -16,9 +16,10 @@ import {
 } from './servicio'
 import { registrarIpc } from './ipc'
 import { vigilarBloqueo } from './bloqueo'
-import { alternarAcceso, destruirAcceso } from './acceso'
+import { alternarAcceso, destruirAcceso, mostrarAccesoTeclear } from './acceso'
 import { aplicarArranque, arrancoOculta } from './autostart'
 import { pararAyudante, precalentar, traerVentana } from './ayudante'
+import { capturarObjetivo } from './teclear'
 import { copiar, vaciarSiEsNuestro } from './portapapeles'
 import { aplicarNavegador, pararNavegador } from './navegador/conexion'
 import type { Piezas } from './navegador/protocolo'
@@ -164,6 +165,17 @@ function abrirAcceso(): void {
   alternarAcceso(isDev, icono, fondo())
 }
 
+/** El atajo del auto-tecleo: captura la ventana de delante y abre el buscador ya filtrado por ella. */
+function abrirAutoTeclear(): void {
+  void capturarObjetivo().then((o) => {
+    if (!o) {
+      registrar('teclear', 'sin ventana de destino')
+      return
+    }
+    mostrarAccesoTeclear(isDev, icono, fondo(), { titulo: o.titulo, exe: o.exe })
+  })
+}
+
 function construirMenu(): void {
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
@@ -205,6 +217,10 @@ function registrarAtajos(a: Ajustes): void {
   if (a.accesoRapido) {
     const ok = globalShortcut.register('CommandOrControl+Shift+Space', abrirAcceso)
     if (!ok) registrar('atajos', 'Ctrl+Mayús+Espacio lo tiene otra aplicación')
+  }
+  if (a.autoTeclear) {
+    const ok = globalShortcut.register('CommandOrControl+Alt+T', abrirAutoTeclear)
+    if (!ok) registrar('atajos', 'Ctrl+Alt+T lo tiene otra aplicación')
   }
   globalShortcut.register('CommandOrControl+Shift+L', () => bloquear('atajo'))
 }

@@ -270,6 +270,16 @@ export function VistaAjustes(): ReactNode {
             hint="Busca, pulsa Intro y la contraseña queda copiada. Ctrl+C copia el usuario y Ctrl+Alt+C el código de un solo uso."
           />
           <Checkbox
+            checked={ajustes.autoTeclear}
+            onChange={(v) => void cambiarAjustes({ autoTeclear: v })}
+            label={
+              <>
+                Escribir usuario y contraseña en otros programas con <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>T</kbd>
+              </>
+            }
+            hint="Abre el mismo buscador, ya filtrado por el programa que tenías delante. Eliges el elemento y CLAC teclea usuario, tabulador y contraseña en su ventana, con Intro si lo marcas."
+          />
+          <Checkbox
             checked={ajustes.cerrarABandeja}
             onChange={(v) => void cambiarAjustes({ cerrarABandeja: v })}
             label="Al cerrar la ventana, seguir en la bandeja"

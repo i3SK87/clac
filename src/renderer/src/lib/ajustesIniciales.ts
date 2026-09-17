@@ -9,6 +9,7 @@ export const AJUSTES_INICIALES: Ajustes = {
   bloquearAlBloquearWindows: true,
   portapapelesSegundos: 90,
   accesoRapido: true,
+  autoTeclear: false,
   arrancarConWindows: false,
   cerrarABandeja: true,
   ordenLista: 'titulo',

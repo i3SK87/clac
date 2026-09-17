@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type {
+  AccesoMostrado,
   AdjuntoInfo,
   Ajustes,
   Boveda,
@@ -101,7 +102,8 @@ const api = {
     buscar: (consulta: string) => llamar<ElementoLista[]>('acceso:buscar', consulta),
     ocultar: () => llamar<void>('acceso:ocultar'),
     abrirEnApp: (id: string) => llamar<void>('acceso:abrirEnApp', id),
-    abrirPrincipal: () => llamar<void>('acceso:abrirPrincipal')
+    abrirPrincipal: () => llamar<void>('acceso:abrirPrincipal'),
+    teclear: (id: string, conIntro: boolean) => llamar<void>('acceso:teclear', id, conIntro)
   },
   watchtower: {
     informe: () => llamar<InformeWatchtower>('watchtower:informe'),
@@ -149,7 +151,7 @@ const api = {
     ajustes: (fn: (a: Ajustes) => void) => escuchar('ajustes:cambio', fn),
     menu: (fn: (accion: string) => void) => escuchar('menu', fn),
     abrirElemento: (fn: (id: string) => void) => escuchar('abrir:elemento', fn),
-    accesoMostrado: (fn: () => void) => escuchar('acceso:mostrado', fn),
+    accesoMostrado: (fn: (payload: AccesoMostrado) => void) => escuchar('acceso:mostrado', fn),
     progresoFiltradas: (fn: (hechas: number, total: number) => void) => escuchar('watchtower:progreso', fn),
     actualizacion: (fn: (e: EstadoActualizacion) => void) => escuchar('actualizacion:cambio', fn)
   }

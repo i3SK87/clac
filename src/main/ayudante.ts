@@ -45,17 +45,39 @@ function Ventanas {
   if ($script:ventanas) { return }
   Add-Type -TypeDefinition @'
 using System;
+using System.Text;
 using System.Runtime.InteropServices;
 namespace Clac {
   public static class Ventanas {
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr p);
+    [DllImport("user32.dll", EntryPoint = "GetWindowThreadProcessId")] static extern uint GetWindowThreadProcessIdPid(IntPtr h, out uint pid);
     [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
     [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool unir);
     [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr h);
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
     [DllImport("user32.dll")] static extern bool IsIconic(IntPtr h);
     [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int como);
+    [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowTextW(IntPtr h, StringBuilder texto, int max);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern bool QueryFullProcessImageNameW(IntPtr proceso, uint flags, StringBuilder buffer, ref int tam);
+    [DllImport("kernel32.dll", SetLastError = true)] static extern IntPtr OpenProcess(uint acceso, bool heredar, uint pid);
+    [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+    [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+    [DllImport("advapi32.dll", SetLastError = true)] static extern bool OpenProcessToken(IntPtr proceso, uint acceso, out IntPtr token);
+    [DllImport("advapi32.dll", SetLastError = true)] static extern bool GetTokenInformation(IntPtr token, int clase, IntPtr info, int tam, out int usado);
+    [DllImport("user32.dll", SetLastError = true)] static extern uint SendInput(uint cuantos, ENTRADA[] entradas, int tamano);
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct TECLADO { public short vk; public short scan; public uint flags; public uint tiempo; public IntPtr extra; }
+    // El tamaño de la unión nativa lo marca MOUSEINPUT (32 bytes en 64 bits), más
+    // grande que KEYBDINPUT (24): sin fijarlo así, SendInput recibe un tamaño de
+    // estructura que no es el suyo y rechaza la llamada entera.
+    [StructLayout(LayoutKind.Explicit, Size = 32)]
+    struct UNION { [FieldOffset(0)] public TECLADO teclado; }
+    [StructLayout(LayoutKind.Sequential)]
+    struct ENTRADA { public uint tipo; public UNION union; }
+
     public static bool Traer(long numero) {
       IntPtr h = new IntPtr(numero);
       if (IsIconic(h)) ShowWindow(h, 9);
@@ -71,6 +93,122 @@ namespace Clac {
         if (unidos) AttachThreadInput(mio, suyo, false);
       }
       return GetForegroundWindow() == h;
+    }
+
+    /** La ventana de delante ahora mismo: hwnd, pid, título y ejecutable, separados por 0x1F. Null si no hay ninguna. */
+    public static string Frente() {
+      IntPtr h = GetForegroundWindow();
+      if (h == IntPtr.Zero) return null;
+      uint pid;
+      GetWindowThreadProcessIdPid(h, out pid);
+      var titulo = new StringBuilder(512);
+      GetWindowTextW(h, titulo, titulo.Capacity);
+      string exe = "";
+      IntPtr proceso = OpenProcess(0x1000 /* PROCESS_QUERY_LIMITED_INFORMATION */, false, pid);
+      if (proceso != IntPtr.Zero) {
+        try {
+          var buf = new StringBuilder(1024);
+          int tam = buf.Capacity;
+          if (QueryFullProcessImageNameW(proceso, 0, buf, ref tam)) exe = buf.ToString();
+        } finally { CloseHandle(proceso); }
+      }
+      return h.ToInt64() + "" + pid + "" + titulo.ToString() + "" + exe;
+    }
+
+    // 1: elevado; 0: no elevado; -1: no se ha podido saber (se trata como «no elevado»).
+    static int Elevacion(IntPtr token) {
+      IntPtr buf = Marshal.AllocHGlobal(4);
+      try {
+        int usado;
+        if (!GetTokenInformation(token, 20 /* TokenElevation */, buf, 4, out usado)) return -1;
+        return Marshal.ReadInt32(buf) != 0 ? 1 : 0;
+      } finally { Marshal.FreeHGlobal(buf); }
+    }
+    static int ElevacionDe(uint pid) {
+      IntPtr proceso = OpenProcess(0x0400 /* PROCESS_QUERY_INFORMATION */, false, pid);
+      if (proceso == IntPtr.Zero) return -1;
+      try {
+        IntPtr token;
+        if (!OpenProcessToken(proceso, 0x0008 /* TOKEN_QUERY */, out token)) return -1;
+        try { return Elevacion(token); } finally { CloseHandle(token); }
+      } finally { CloseHandle(proceso); }
+    }
+    static int ElevacionPropia() {
+      IntPtr token;
+      if (!OpenProcessToken(GetCurrentProcess(), 0x0008, out token)) return -1;
+      try { return Elevacion(token); } finally { CloseHandle(token); }
+    }
+
+    static ENTRADA TeclaUnicode(char c, bool soltar) {
+      var e = new ENTRADA();
+      e.tipo = 1; // INPUT_KEYBOARD
+      e.union.teclado.scan = (short)c;
+      e.union.teclado.flags = (uint)(soltar ? 0x0006 : 0x0004); // KEYEVENTF_UNICODE [| KEYEVENTF_KEYUP]
+      return e;
+    }
+    static ENTRADA Tecla(short vk, bool soltar) {
+      var e = new ENTRADA();
+      e.tipo = 1;
+      e.union.teclado.vk = vk;
+      e.union.teclado.flags = soltar ? 0x0002u : 0u; // KEYEVENTF_KEYUP
+      return e;
+    }
+    static bool Enviar(ENTRADA[] entradas) {
+      if (entradas.Length == 0) return true;
+      return SendInput((uint)entradas.Length, entradas, Marshal.SizeOf(typeof(ENTRADA))) == (uint)entradas.Length;
+    }
+    static bool EscribirTexto(string texto) {
+      if (texto.Length == 0) return true;
+      var entradas = new ENTRADA[texto.Length * 2];
+      for (int i = 0; i < texto.Length; i++) {
+        entradas[i * 2] = TeclaUnicode(texto[i], false);
+        entradas[i * 2 + 1] = TeclaUnicode(texto[i], true);
+      }
+      return Enviar(entradas);
+    }
+    static bool PulsarTecla(short vk) {
+      return Enviar(new ENTRADA[] { Tecla(vk, false), Tecla(vk, true) });
+    }
+
+    /**
+     * Escribe usuario, tabulador y contraseña (e Intro, si toca) en la ventana
+     * «numero», del proceso «pid». Antes comprueba que la ventana sigue siendo
+     * esa y de ese proceso, la pone delante y vuelve a comprobar justo antes de
+     * escribir. Códigos: ok, ventana (ya no existe o es de otro proceso),
+     * elevada (más privilegios que CLAC: Windows bloquearía el tecleo),
+     * cambiada (no ha quedado delante) o bloqueado (Windows ha rechazado parte
+     * del tecleo ya empezado).
+     */
+    public static string Teclear(long numero, long pidNumero, string usuario, string contrasena, bool conIntro) {
+      IntPtr h = new IntPtr(numero);
+      uint pid = (uint)pidNumero;
+      if (!IsWindow(h)) return "ventana";
+      uint duena;
+      GetWindowThreadProcessIdPid(h, out duena);
+      if (duena != pid) return "ventana";
+
+      if (ElevacionDe(pid) == 1 && ElevacionPropia() != 1) return "elevada";
+
+      if (IsIconic(h)) ShowWindow(h, 9);
+      IntPtr delante = GetForegroundWindow();
+      if (delante != h) {
+        uint hiloSuyo = delante == IntPtr.Zero ? 0 : GetWindowThreadProcessId(delante, IntPtr.Zero);
+        uint hiloMio = GetCurrentThreadId();
+        bool unidos = hiloSuyo != 0 && hiloSuyo != hiloMio && AttachThreadInput(hiloMio, hiloSuyo, true);
+        try {
+          BringWindowToTop(h);
+          SetForegroundWindow(h);
+        } finally {
+          if (unidos) AttachThreadInput(hiloMio, hiloSuyo, false);
+        }
+      }
+      if (GetForegroundWindow() != h) return "cambiada";
+
+      bool bien = true;
+      if (usuario.Length > 0) bien = EscribirTexto(usuario) && PulsarTecla(0x09 /* VK_TAB */);
+      if (bien) bien = EscribirTexto(contrasena);
+      if (bien && conIntro) bien = PulsarTecla(0x0D /* VK_RETURN */);
+      return bien ? "ok" : "bloqueado";
     }
   }
 }
@@ -138,6 +276,27 @@ while ($true) {
     if ($orden.op -eq 'traer') {
       Ventanas
       $datos = [string][Clac.Ventanas]::Traer([long]$orden.ventana)
+    }
+    if ($orden.op -eq 'frente') {
+      Ventanas
+      $cruda = [Clac.Ventanas]::Frente()
+      if ($cruda -ne $null) {
+        $sep = [char]0x1F
+        $partes = $cruda.Split($sep)
+        $obj = [ordered]@{ hwnd = $partes[0]; pid = [long]$partes[1]; titulo = $partes[2]; exe = $partes[3] }
+        $datos = ($obj | ConvertTo-Json -Compress)
+      }
+    }
+    if ($orden.op -eq 'teclear') {
+      Ventanas
+      $usuario = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($orden.usuario))
+      $contrasena = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($orden.contrasena))
+      try {
+        $datos = [Clac.Ventanas]::Teclear([long]$orden.ventana, [long]$orden.pid, $usuario, $contrasena, [bool]$orden.intro)
+      } finally {
+        $usuario = $null
+        $contrasena = $null
+      }
     }
     if ($orden.op -eq 'helloEstado') {
       $h = Hello
@@ -251,6 +410,57 @@ export async function copiarSinHistorial(texto: string): Promise<boolean> {
 export async function traerVentana(ventana: bigint): Promise<boolean> {
   const r = await pedir({ op: 'traer', ventana: ventana.toString() }, 5000)
   return r.ok && r.datos === 'True'
+}
+
+export interface VentanaFrente {
+  hwnd: bigint
+  pid: number
+  titulo: string
+  exe: string
+}
+
+/** Qué ventana está delante ahora mismo. `null` si no se ha podido saber. */
+export async function frenteVentana(): Promise<VentanaFrente | null> {
+  const r = await pedir({ op: 'frente' }, 5000)
+  if (!r.ok || !r.datos) return null
+  try {
+    const o = JSON.parse(r.datos) as { hwnd: string; pid: number; titulo: string; exe: string }
+    return { hwnd: BigInt(o.hwnd), pid: o.pid, titulo: o.titulo, exe: o.exe }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * `ok`: escrito. `ventana`: la de destino ya no existe o es de otro proceso.
+ * `elevada`: esa ventana tiene más privilegios que CLAC y Windows bloquea el
+ * tecleo. `cambiada`: no se ha podido poner delante, o cambió justo antes de
+ * escribir. `bloqueado`: Windows ha rechazado parte del tecleo ya empezado.
+ * `fallo`: el ayudante no ha podido ni intentarlo.
+ */
+export type ResultadoTeclear = 'ok' | 'ventana' | 'elevada' | 'cambiada' | 'bloqueado' | 'fallo'
+
+/** Escribe usuario, tabulador y contraseña (e Intro, si `conIntro`) con SendInput, no por el portapapeles. */
+export async function teclearEn(
+  hwnd: bigint,
+  pid: number,
+  usuario: string,
+  contrasena: string,
+  conIntro: boolean
+): Promise<ResultadoTeclear> {
+  const r = await pedir(
+    {
+      op: 'teclear',
+      ventana: hwnd.toString(),
+      pid,
+      usuario: Buffer.from(usuario, 'utf8').toString('base64'),
+      contrasena: Buffer.from(contrasena, 'utf8').toString('base64'),
+      intro: conIntro
+    },
+    5000
+  )
+  if (!r.ok || !r.datos) return 'fallo'
+  return r.datos as ResultadoTeclear
 }
 
 /**

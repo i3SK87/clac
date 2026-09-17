@@ -14,7 +14,8 @@ import { createRoot } from 'react-dom/client'
 import { Lock, ScanFace, Search } from 'lucide-react'
 import { aplicarTemaGuardado, recordarTema, vestir } from 'casa/tema'
 import { mensajeDeError } from 'casa/ui'
-import type { ElementoLista, EstadoSesion } from '@shared/tipos'
+import type { AccesoMostrado, ElementoLista, EstadoSesion } from '@shared/tipos'
+import { nombrePrograma } from '@shared/programas'
 import { Avatar } from './components/piezas'
 import 'casa/paletas.css'
 import 'casa/base.css'
@@ -28,6 +29,7 @@ const NOMBRE: Record<Que, string> = { usuario: 'Usuario copiado', contrasena: 'C
 
 function Acceso(): ReactNode {
   const [sesion, setSesion] = useState<EstadoSesion | null>(null)
+  const [modo, setModo] = useState<AccesoMostrado>({ modo: 'buscar' })
   const [consulta, setConsulta] = useState('')
   const [resultados, setResultados] = useState<ElementoLista[]>([])
   const [indice, setIndice] = useState(0)
@@ -48,6 +50,37 @@ function Acceso(): ReactNode {
     }
   }, [])
 
+  /**
+   * En modo teclear, filtra primero por el título de la ventana y, si no sale
+   * nada, por el nombre de su ejecutable. Sin ninguno de los dos, lo de siempre.
+   */
+  const cargarInicial = useCallback(
+    async (payload: AccesoMostrado): Promise<void> => {
+      if (payload.modo !== 'teclear') {
+        setConsulta('')
+        await cargar('')
+        return
+      }
+      const intentos = [payload.titulo, nombrePrograma(payload.exe)].map((s) => s.trim()).filter(Boolean)
+      for (const intento of intentos) {
+        try {
+          const r = await api.acceso.buscar(intento)
+          if (r.length) {
+            setConsulta(intento)
+            setResultados(r)
+            setIndice(0)
+            return
+          }
+        } catch {
+          // Se prueba el siguiente intento.
+        }
+      }
+      setConsulta('')
+      await cargar('')
+    },
+    [cargar]
+  )
+
   const usarHello = useCallback(async () => {
     if (pidiendoHello.current) return
     pidiendoHello.current = true
@@ -67,25 +100,28 @@ function Acceso(): ReactNode {
     }
   }, [])
 
-  const alMostrar = useCallback(async () => {
-    setConsulta('')
-    setMensaje(null)
-    setContrasena('')
-    const estado = await api.sesion.estado()
-    setSesion(estado)
-    if (estado === 'abierta') await cargar('')
-    setTimeout(() => campo.current?.focus(), 0)
-    if (estado === 'bloqueada') {
-      const listo = (await api.sesion.hello()).listo
-      setHelloListo(listo)
-      if (listo) void usarHello()
-    }
-  }, [cargar, usarHello])
+  const alMostrar = useCallback(
+    async (payload: AccesoMostrado) => {
+      setModo(payload)
+      setMensaje(null)
+      setContrasena('')
+      const estado = await api.sesion.estado()
+      setSesion(estado)
+      if (estado === 'abierta') await cargarInicial(payload)
+      setTimeout(() => campo.current?.focus(), 0)
+      if (estado === 'bloqueada') {
+        const listo = (await api.sesion.hello()).listo
+        setHelloListo(listo)
+        if (listo) void usarHello()
+      }
+    },
+    [cargarInicial, usarHello]
+  )
 
   useEffect(() => {
-    void alMostrar()
+    void alMostrar({ modo: 'buscar' })
     const quitar = [
-      api.en.accesoMostrado(() => void alMostrar()),
+      api.en.accesoMostrado((payload) => void alMostrar(payload)),
       api.en.sesion((estado) => {
         setSesion(estado)
         if (estado === 'abierta') void cargar(consulta)
@@ -118,6 +154,20 @@ function Acceso(): ReactNode {
     }
   }
 
+  /** Modo teclear: escribe usuario, tabulador y contraseña en la ventana que estaba delante. */
+  const escribir = async (conIntro: boolean): Promise<void> => {
+    const e = resultados[indice]
+    if (!e) return
+    try {
+      await api.acceso.teclear(e.id, conIntro)
+      setMensaje({ texto: 'Escrito' })
+      // Un instante para que se lea, y fuera: el foco vuelve a donde estaba.
+      setTimeout(() => void api.acceso.ocultar(), 350)
+    } catch (err) {
+      setMensaje({ texto: mensajeDeError(err), error: true })
+    }
+  }
+
   const tecla = (ev: React.KeyboardEvent<HTMLInputElement>): void => {
     const k = ev.key.toLowerCase()
     if (ev.key === 'Escape') {
@@ -132,6 +182,9 @@ function Acceso(): ReactNode {
     } else if (ev.key === 'ArrowUp') {
       ev.preventDefault()
       setIndice((i) => Math.max(0, i - 1))
+    } else if (ev.key === 'Enter' && modo.modo === 'teclear') {
+      ev.preventDefault()
+      void escribir(ev.altKey)
     } else if (ev.key === 'Enter' && ev.altKey) {
       ev.preventDefault()
       void copiar('contrasena', 'abrir')
@@ -229,7 +282,13 @@ function Acceso(): ReactNode {
           onKeyDown={tecla}
         />
       </div>
-      <div className="acceso-rotulo rotulo">{consulta.trim() ? 'Resultados' : 'Lo que más usas'}</div>
+      <div className="acceso-rotulo rotulo">
+        {modo.modo === 'teclear'
+          ? `Vas a escribir en «${modo.titulo || nombrePrograma(modo.exe) || 'la ventana de antes'}»`
+          : consulta.trim()
+            ? 'Resultados'
+            : 'Lo que más usas'}
+      </div>
       <div className="acceso-lista" ref={lista} role="listbox" aria-label="Resultados">
         {resultados.length === 0 && <p className="acceso-vacio small muted">{consulta ? `Nada se llama «${consulta}».` : 'La caja está vacía.'}</p>}
         {resultados.map((e, i) => (
@@ -239,7 +298,7 @@ function Acceso(): ReactNode {
             aria-selected={i === indice}
             className={`fila-elemento${i === indice ? ' elegida' : ''}`}
             onMouseMove={() => setIndice(i)}
-            onClick={() => void copiar('contrasena')}
+            onClick={() => void (modo.modo === 'teclear' ? escribir(false) : copiar('contrasena'))}
           >
             <Avatar titulo={e.titulo} categoria={e.categoria} webs={e.webs} />
             <span className="fila-textos">
@@ -252,6 +311,18 @@ function Acceso(): ReactNode {
       <div className={`acceso-pie small${mensaje?.error ? ' error' : ''}`}>
         {mensaje ? (
           mensaje.texto
+        ) : modo.modo === 'teclear' ? (
+          <>
+            <span>
+              <kbd>Intro</kbd> escribe usuario y contraseña
+            </span>
+            <span>
+              <kbd>Alt</kbd>+<kbd>Intro</kbd> y pulsa Intro
+            </span>
+            <span>
+              <kbd>Esc</kbd> cancelar
+            </span>
+          </>
         ) : (
           <>
             <span>
