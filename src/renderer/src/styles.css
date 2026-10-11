@@ -44,6 +44,7 @@
   min-height: 0;
   overflow-y: auto;
   scrollbar-gutter: stable;
+  container: detalle / inline-size;
 }
 
 /* ---------- La lista ---------- */
@@ -165,14 +166,17 @@
   max-width: none;
 }
 
+/* Si no cabe todo en una línea, los botones bajan a la siguiente antes de que
+   el título se quede en una letra por renglón. */
 .detalle-cabecera {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
 }
 
 .detalle-titulos {
-  flex: 1;
+  flex: 1 1 150px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -790,7 +794,20 @@
    tercio izquierdo con el resto vacío. */
 @container (min-width: 1500px) {
   .caja { grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); }
+}
+
+@container detalle (min-width: 1100px) {
   .detalle { max-width: 940px; }
+}
+
+/* Más estrecha que el mínimo de la ventana (GlazeWM se lo salta): la lista
+   cede sitio y la ficha aprieta los márgenes. */
+@container (max-width: 600px) {
+  .caja { grid-template-columns: minmax(190px, 230px) minmax(0, 1fr); }
+}
+
+@container detalle (max-width: 420px) {
+  .detalle { padding: 18px 18px 40px; }
 }
 
 /* ---------- Buscador de la cabecera ---------- */

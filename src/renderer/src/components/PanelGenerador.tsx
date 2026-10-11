@@ -80,22 +80,25 @@ export function PanelGenerador({
       <div className="generador-salida mono" aria-live="polite">
         <ContrasenaPintada valor={actual.valor} />
       </div>
-      <div className="row">
+      {/* Si no caben al lado del medidor, los botones bajan juntos a otra línea. */}
+      <div className="row wrap">
         <Medidor fortaleza={f} bits />
         <span className="spacer" />
-        <button type="button" className="btn ghost icon" title="Otra" aria-label="Generar otra" onClick={() => setActual(generar(op))}>
-          <RefreshCw size={16} />
-        </button>
-        {alCopiar && (
-          <button type="button" className="btn small" onClick={() => alCopiar(actual.valor)}>
-            <Copy size={14} /> Copiar
+        <div className="row">
+          <button type="button" className="btn ghost icon" title="Otra" aria-label="Generar otra" onClick={() => setActual(generar(op))}>
+            <RefreshCw size={16} />
           </button>
-        )}
-        {alUsar && (
-          <button type="button" className="btn small primary" onClick={() => alUsar(actual.valor)}>
-            {etiquetaUsar}
-          </button>
-        )}
+          {alCopiar && (
+            <button type="button" className="btn small" onClick={() => alCopiar(actual.valor)}>
+              <Copy size={14} /> Copiar
+            </button>
+          )}
+          {alUsar && (
+            <button type="button" className="btn small primary" onClick={() => alUsar(actual.valor)}>
+              {etiquetaUsar}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="generador-opciones">
