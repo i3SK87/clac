@@ -13,7 +13,7 @@
  *
  * 1. Que el proceso es **el CLAC.exe de esta instalación**: el puente es el
  *    propio CLAC.exe en modo Node, arrancado por el .cmd que lanza el navegador.
- * 2. Que lo ha abierto **un navegador** (Opera, Chrome, Edge o Brave), mirando
+ * 2. Que lo ha abierto **un navegador** (Opera, Chrome, Edge, Brave o Dia), mirando
  *    hacia arriba en su familia: el navegador arranca el .cmd con cmd.exe, y
  *    cmd.exe arranca el puente.
  *
@@ -221,8 +221,8 @@ ${CSHARP}
 [Clac.Portero]::Correr($env:CLAC_TUBO, $env:CLAC_EXE, $env:CLAC_NAVEGADORES)
 `
 
-/** Los que pueden abrir el puente. Opera Air también se llama opera.exe. */
-export const NAVEGADORES = ['opera.exe', 'chrome.exe', 'msedge.exe', 'brave.exe']
+/** Los que pueden abrir el puente. Opera Air también se llama opera.exe; Dia, Dia.exe. */
+export const NAVEGADORES = ['opera.exe', 'chrome.exe', 'msedge.exe', 'brave.exe', 'dia.exe']
 
 export interface OpcionesPortero {
   tubo: string

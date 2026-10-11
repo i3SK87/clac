@@ -436,7 +436,7 @@ function TarjetaNavegador(): ReactNode {
         <Checkbox
           checked={ajustes.navegador}
           onChange={(v) => void cambiarAjustes({ navegador: v })}
-          label="Dejar que la extensión de CLAC rellene contraseñas en Opera, Chrome, Edge o Brave"
+          label="Dejar que la extensión de CLAC rellene contraseñas en Opera, Chrome, Edge, Brave o Dia"
           hint="Apunta en el registro de Windows, solo para tu usuario, quién es CLAC para esa extensión y para ninguna otra. Apagarlo lo borra."
         />
         {ajustes.navegador && info && (

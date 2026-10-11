@@ -7,7 +7,7 @@
  *    en `%APPDATA%\CLAC\navegador` el puente, el .cmd que lo arranca y el
  *    manifiesto que dice qué extensión puede usarlo (solo la nuestra, por su
  *    identificador), y se apunta ese manifiesto en el registro de Windows del
- *    usuario, en la clave que leen Chrome, Opera y Brave, y en la de Edge.
+ *    usuario, en la clave que leen Chrome, Opera, Brave y Dia, y en la de Edge.
  *    Se hace con `reg.exe`: sin módulos nativos.
  *
  * 2. **Escuchar** en un canal con nombre de Windows, que solo es de este usuario.

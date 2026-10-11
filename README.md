@@ -66,7 +66,7 @@ te la robara.
 ## La extensión para el navegador
 
 Rellena el usuario, la contraseña y el código de un solo uso en Opera Air (y en
-Chrome, Edge o Brave). Pulsas el candado de CLAC en la barra —o `Ctrl + Mayús +
+Chrome, Edge, Brave o Dia). Pulsas el candado de CLAC en la barra —o `Ctrl + Mayús +
 X`—, te enseña lo guardado de la web en la que estás, y con `Intro` o un clic lo
 escribe en el formulario. Si el elemento es de otra web, **para y avisa antes**:
 es como se descubre una web falsa que imita a la de tu banco.
