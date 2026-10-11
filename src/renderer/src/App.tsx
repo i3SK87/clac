@@ -97,8 +97,8 @@ function Principal(): ReactNode {
             </div>
           )}
           {deLista && vista.tipo !== 'papelera' && (
-            <button className="btn primary" onClick={() => setCreando(true)} title="Nuevo elemento (Ctrl+N)">
-              <Plus size={16} /> Nuevo elemento
+            <button className="btn primary boton-nuevo" onClick={() => setCreando(true)} title="Nuevo elemento (Ctrl+N)" aria-label="Nuevo elemento">
+              <Plus size={16} /> <span className="boton-nuevo-texto">Nuevo elemento</span>
             </button>
           )}
         </header>

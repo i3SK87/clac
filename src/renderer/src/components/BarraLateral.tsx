@@ -152,7 +152,6 @@ export function BarraLateral(): ReactNode {
         <button className="nav-item" onClick={() => void run(() => api.sesion.bloquear())} title="Bloquear (Ctrl+Mayús+L)">
           <Lock size={17} />
           <span className="nav-label">Bloquear</span>
-          <kbd className="solo-ancha nav-kbd">Ctrl+Mayús+L</kbd>
         </button>
       </div>
 

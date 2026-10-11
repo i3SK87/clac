@@ -763,13 +763,6 @@
 
 .sidebar-mas:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 
-.nav-kbd {
-  margin-left: auto;
-  background: transparent;
-  border-color: rgba(255, 255, 255, 0.16);
-  color: var(--sidebar-fg);
-  font-size: 10px;
-}
 
 .sidebar { overflow-x: hidden; }
 
@@ -779,6 +772,25 @@
   .sidebar .sidebar-section.con-boton { display: none; }
   .sidebar .sidebar-section:empty { display: block; height: 10px; padding: 0; }
   .nav-fila { display: flex; justify-content: center; }
+  /* La casa esconde el pie en la barra de iconos, pero en CLAC el pie son
+     Ajustes y Bloquear: se quedan, como dos iconos más. */
+  .sidebar .sidebar-footer { display: block; align-self: stretch; padding: 10px 0 4px; }
+}
+
+/* ---------- Al tamaño de la ventana ---------- */
+
+/* Estrecha (en mosaico, junto a otras): el botón de nuevo se queda en el +,
+   y el buscador se lleva el sitio. */
+@container (max-width: 760px) {
+  .topbar .boton-nuevo { gap: 0; padding-left: 10px; padding-right: 10px; }
+  .topbar .boton-nuevo-texto { display: none; }
+}
+
+/* Pantalla completa: la lista y la ficha crecen, en vez de quedarse en el
+   tercio izquierdo con el resto vacío. */
+@container (min-width: 1500px) {
+  .caja { grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); }
+  .detalle { max-width: 940px; }
 }
 
 /* ---------- Buscador de la cabecera ---------- */
