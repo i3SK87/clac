@@ -15,6 +15,7 @@ import { PETICIONES_DE_PAGINA, type EstadoLlaves, type RespuestaCrearLlave, type
 import { llavesDe, rpIdDe } from '../src/shared/llaves'
 import { createHash, createPublicKey, verify } from 'node:crypto'
 import { arrancarPortero } from '../src/main/navegador/portero'
+import { lanzarPowerShell } from '../src/main/powershell'
 
 import { enteroAleatorio, barajar } from '../src/shared/aleatorio'
 import { ALFABETO, formatearClave, leerClave, nuevaClaveSecreta, nuevoIdCuenta } from '../src/shared/claveSecreta'
@@ -1107,6 +1108,40 @@ async function main(): Promise<void> {
     const sinNavegador = await probar('huerfano', process.execPath, ['opera.exe', 'chrome.exe'])
     check('el puente arrancado fuera del navegador no pasa', sinNavegador.rechazo !== null && /no lo ha abierto un navegador/.test(sinNavegador.rechazo), String(sinNavegador.rechazo))
     equal('y tampoco le llega nada', sinNavegador.pedidas.length, 0)
+  }
+
+  section('PowerShell con un guion largo')
+  {
+    // El del ayudante pasa de 13.000 caracteres: en la línea de órdenes, con
+    // -EncodedCommand, eso ya no cabía (spawn ENAMETOOLONG desde la 1.6.0).
+    const relleno = Array.from({ length: 400 }, (_, i) => `# relleno ${i} ${'x'.repeat(40)}`).join('\n')
+    const guion = [
+      "$ErrorActionPreference = 'Stop'",
+      "$script:texto = @'",
+      'dentro',
+      "'@",
+      relleno,
+      '$linea = [Console]::In.ReadLine()',
+      '[Console]::Out.WriteLine("$($script:texto.Trim()) $linea [$env:CLAC_GUION] $env:CLAC_OTRA")'
+    ].join('\n')
+    check('el guion de prueba no cabría en la línea de órdenes', Buffer.from(guion, 'utf16le').toString('base64').length > 32_767)
+    const p = lanzarPowerShell(guion, ['-Sta'], { CLAC_OTRA: 'otra' })
+    let salida = ''
+    p.stdout.setEncoding('utf8')
+    p.stdout.on('data', (t: string) => (salida += t))
+    const fin = new Promise<number | null>((r) => p.on('exit', r))
+    p.stdin.write('hola\n')
+    p.stdin.end()
+    const codigo = await fin
+    equal('arranca, lee la entrada y contesta', salida.trim(), 'dentro hola [] otra')
+    equal('y termina bien', codigo, 0)
+    let largo = ''
+    try {
+      lanzarPowerShell('#'.repeat(40_000), [])
+    } catch (error) {
+      largo = String(error)
+    }
+    check('uno que no cabe ni en la variable se rechaza con un error claro', /demasiado largo/.test(largo))
   }
 
   console.log(`\n${passed} bien, ${failed} mal`)

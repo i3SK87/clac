@@ -30,7 +30,8 @@
  *
  * No depende de Electron: se prueba con Node en `npm test`.
  */
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import type { ChildProcessWithoutNullStreams } from 'node:child_process'
+import { lanzarPowerShell } from '../powershell'
 
 const CSHARP = `
 using System;
@@ -246,14 +247,11 @@ const deB64 = (s: string): string => Buffer.from(s, 'base64').toString('utf8')
 const aB64 = (s: string): string => Buffer.from(s, 'utf8').toString('base64')
 
 export function arrancarPortero(o: OpcionesPortero): Portero {
-  const p: ChildProcessWithoutNullStreams = spawn(
-    'powershell.exe',
-    ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(GUION, 'utf16le').toString('base64')],
-    {
-      windowsHide: true,
-      env: { ...process.env, CLAC_TUBO: o.tubo, CLAC_EXE: o.exe, CLAC_NAVEGADORES: (o.navegadores ?? NAVEGADORES).join(',') }
-    }
-  )
+  const p: ChildProcessWithoutNullStreams = lanzarPowerShell(GUION, [], {
+    CLAC_TUBO: o.tubo,
+    CLAC_EXE: o.exe,
+    CLAC_NAVEGADORES: (o.navegadores ?? NAVEGADORES).join(',')
+  })
   let parado = false
   let resto = ''
   p.stdout.setEncoding('utf8')

@@ -30,7 +30,8 @@
  * la cola de entrada de la ventana de delante (`AttachThreadInput`): para
  * Windows, entonces, el cambio de foco lo pide la misma cola que lo tiene.
  */
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import type { ChildProcessWithoutNullStreams } from 'node:child_process'
+import { lanzarPowerShell } from './powershell'
 import { registrar, registrarFallo } from './registro'
 
 const GUION = `
@@ -332,12 +333,7 @@ const esperando = new Map<number, { resolver: (r: Respuesta) => void; plazo: Nod
 
 function arrancar(): ChildProcessWithoutNullStreams {
   if (proceso && !proceso.killed && proceso.exitCode === null) return proceso
-  const codificado = Buffer.from(GUION, 'utf16le').toString('base64')
-  const p = spawn(
-    'powershell.exe',
-    ['-NoLogo', '-NoProfile', '-NonInteractive', '-Sta', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', codificado],
-    { windowsHide: true }
-  )
+  const p = lanzarPowerShell(GUION, ['-Sta'])
   p.stdout.setEncoding('utf8')
   p.stdout.on('data', (trozo: string) => {
     pendiente += trozo
